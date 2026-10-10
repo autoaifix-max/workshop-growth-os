@@ -23,6 +23,7 @@ insert into public.bookings(id,workshop_id,customer_id,vehicle_id,requested_serv
 insert into public.work_orders(id,workshop_id,booking_id,customer_id,vehicle_id,requested_service,created_by) values
  ('aaaaaaaa-0004-4000-8000-000000000001','aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa','aaaaaaaa-0003-4000-8000-000000000001','aaaaaaaa-0001-4000-8000-000000000001','aaaaaaaa-0002-4000-8000-000000000001','Diagnostic A','11111111-1111-4111-8111-111111111111'),
  ('bbbbbbbb-0004-4000-8000-000000000001','bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb','bbbbbbbb-0003-4000-8000-000000000001','bbbbbbbb-0001-4000-8000-000000000001','bbbbbbbb-0002-4000-8000-000000000001','Diagnostic B','22222222-2222-4222-8222-222222222222');
+insert into public.bookings(id,workshop_id,customer_id,vehicle_id,requested_service,scheduled_at,created_by) values ('bbbbbbbb-0005-4000-8000-000000000001','bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb','bbbbbbbb-0001-4000-8000-000000000001','bbbbbbbb-0002-4000-8000-000000000001','Diagnostic B2',now(),'22222222-2222-4222-8222-222222222222');
 set local role authenticated;
 select set_config('request.jwt.claim.sub','11111111-1111-4111-8111-111111111111',true);
 do $$
@@ -52,7 +53,7 @@ begin
  end;
  begin
   insert into public.work_orders(workshop_id,booking_id,customer_id,requested_service,created_by)
-  values ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa','bbbbbbbb-0003-4000-8000-000000000001','aaaaaaaa-0001-4000-8000-000000000001','Cross Tenant Booking','11111111-1111-4111-8111-111111111111');
+  values ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa','bbbbbbbb-0005-4000-8000-000000000001','aaaaaaaa-0001-4000-8000-000000000001','Cross Tenant Booking','11111111-1111-4111-8111-111111111111');
   raise exception 'Composite FK allowed cross-workshop work-order/booking link';
  exception when foreign_key_violation then null;
  end;
