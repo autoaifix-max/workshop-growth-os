@@ -5,13 +5,17 @@ begin;
 insert into auth.users(id) values
  ('11111111-1111-4111-8111-111111111111'),
  ('22222222-2222-4222-8222-222222222222'),
- ('33333333-3333-4333-8333-333333333333');
+ ('33333333-3333-4333-8333-333333333333'),
+ ('44444444-4444-4444-8444-444444444444'),
+ ('55555555-5555-4555-8555-555555555555');
 insert into public.workshops(id,name,slug,status) values
  ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa','Workshop A','workshop-a','active'),
  ('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb','Workshop B','workshop-b','active');
 insert into public.workshop_memberships(workshop_id,user_id,role,status) values
  ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa','11111111-1111-4111-8111-111111111111','owner','active'),
- ('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb','22222222-2222-4222-8222-222222222222','owner','active');
+ ('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb','22222222-2222-4222-8222-222222222222','owner','active'),
+ ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa','44444444-4444-4444-8444-444444444444','technician','active'),
+ ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa','55555555-5555-4555-8555-555555555555','receptionist','active');
 insert into public.customers(id,workshop_id,full_name,phone,created_by) values
  ('aaaaaaaa-0001-4000-8000-000000000001','aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa','Customer A','0500000001','11111111-1111-4111-8111-111111111111'),
  ('bbbbbbbb-0001-4000-8000-000000000001','bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb','Customer B','0500000002','22222222-2222-4222-8222-222222222222');
@@ -60,6 +64,8 @@ begin
  end;
 end $tenant$;
 
+insert into public.bookings(id,workshop_id,customer_id,vehicle_id,requested_service,scheduled_at,created_by) values ('aaaaaaaa-0005-4000-8000-000000000001','aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa','aaaaaaaa-0001-4000-8000-000000000001','aaaaaaaa-0002-4000-8000-000000000001','Diagnostic A2',now(),'11111111-1111-4111-8111-111111111111');
+
 -- A valid authenticated user with no active workshop membership must not see or mutate tenant data.
 select set_config('request.jwt.claim.sub','33333333-3333-4333-8333-333333333333',true);
 do $tenant$
@@ -76,5 +82,71 @@ begin
  exception when insufficient_privilege then null;
  end;
 end $tenant$;
+
+-- Database-level role regression tests: keep direct Supabase writes aligned with API permissions.
+select set_config('request.jwt.claim.sub','44444444-4444-4444-8444-444444444444',true);
+do $tenant$
+declare affected integer;
+begin
+  -- Technicians may register vehicles for customers in their own workshop.
+  insert into public.vehicles(workshop_id,customer_id,plate_number,make,model,created_by)
+  values ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa','aaaaaaaa-0001-4000-8000-000000000001',
+          'A-TECH-1','Toyota','Yaris','44444444-4444-4444-8444-444444444444');
+
+  -- But customer creation remains restricted to owner/admin/receptionist.
+  begin
+    insert into public.customers(workshop_id,full_name,phone,created_by)
+    values ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa','Technician Customer','0500000098',
+            '44444444-4444-4444-8444-444444444444');
+    raise exception 'RLS allowed technician customer insert';
+  exception when insufficient_privilege then null;
+  end;
+
+  -- Technicians cannot create bookings directly through Supabase.
+  begin
+    insert into public.bookings(workshop_id,customer_id,vehicle_id,requested_service,scheduled_at,created_by)
+    values ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa','aaaaaaaa-0001-4000-8000-000000000001',
+            'aaaaaaaa-0002-4000-8000-000000000001','Technician booking',now(),
+            '44444444-4444-4444-8444-444444444444');
+    raise exception 'RLS allowed technician booking insert';
+  exception when insufficient_privilege then null;
+  end;
+
+  -- This matches the API's explicit 403 for technician work-order creation.
+  begin
+    insert into public.work_orders(workshop_id,booking_id,customer_id,vehicle_id,requested_service,created_by)
+    values ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa','aaaaaaaa-0005-4000-8000-000000000001',
+            'aaaaaaaa-0001-4000-8000-000000000001','aaaaaaaa-0002-4000-8000-000000000001',
+            'Diagnostic A2','44444444-4444-4444-8444-444444444444');
+    raise exception 'RLS allowed technician work-order insert contrary to the API contract';
+  exception when insufficient_privilege then null;
+  end;
+
+  -- Technicians retain permission to update existing work orders under the current policy.
+  update public.work_orders set notes = 'Technician update policy verified'
+  where id = 'aaaaaaaa-0004-4000-8000-000000000001';
+  get diagnostics affected = row_count;
+  if affected <> 1 then raise exception 'Technician could not update an in-workshop work order'; end if;
+end $tenant$;
+
+-- Receptionists retain the customer, booking, and work-order write permissions granted by the API.
+select set_config('request.jwt.claim.sub','55555555-5555-4555-8555-555555555555',true);
+do $tenant$
+begin
+  insert into public.customers(workshop_id,full_name,phone,created_by)
+  values ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa','Reception Test Customer','0500000097',
+          '55555555-5555-4555-8555-555555555555');
+
+  insert into public.bookings(id,workshop_id,customer_id,vehicle_id,requested_service,scheduled_at,created_by)
+  values ('aaaaaaaa-0006-4000-8000-000000000001','aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+          'aaaaaaaa-0001-4000-8000-000000000001','aaaaaaaa-0002-4000-8000-000000000001',
+          'Receptionist booking',now(),'55555555-5555-4555-8555-555555555555');
+
+  insert into public.work_orders(workshop_id,booking_id,customer_id,vehicle_id,requested_service,created_by)
+  values ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa','aaaaaaaa-0006-4000-8000-000000000001',
+          'aaaaaaaa-0001-4000-8000-000000000001','aaaaaaaa-0002-4000-8000-000000000001',
+          'Receptionist booking','55555555-5555-4555-8555-555555555555');
+end $tenant$;
+
 reset role;
 rollback;
