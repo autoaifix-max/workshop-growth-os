@@ -81,3 +81,11 @@ textarea.wg-input { resize:vertical; line-height:1.7; }
 .auth-notice{background:#e9f9ef;color:#146b37}
 .auth-error{background:#fff0f0;color:#9d2020}
 .auth-footnote{padding:0;color:#7b818a}
+
+/* Work-order state transitions */
+.work-order-status-cell{display:flex;min-width:145px;flex-direction:column;align-items:flex-start;gap:7px}
+.work-order-status-select{max-width:180px;border:1px solid #e0e3e8;border-radius:8px;background:#fff;padding:7px 8px;color:#353a40;font:inherit;font-size:11px}
+.work-order-status-select:focus{outline:2px solid #d8b300;outline-offset:1px}
+.work-order-status-select:disabled{opacity:.7;cursor:not-allowed}
+.work-order-feedback{margin:0 22px 14px;padding:10px 12px;border-radius:9px;background:#e9f9ef;color:#146b37;font-size:12px;line-height:1.7}
+@media(max-width:700px){.work-order-feedback{margin:0 14px 12px}}
