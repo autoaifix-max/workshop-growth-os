@@ -87,6 +87,23 @@ describe("PATCH /api/v1/bookings state transitions", () => {
     expect(db.updateQuery.eq).toHaveBeenCalledWith("status", "pending");
   });
 
+  it("allows pending -> in_progress to reach the database guard when a work order exists", async () => {
+    const db = setup({ current: "pending" });
+    const response = await PATCH(request("in_progress"));
+
+    // The PostgreSQL trigger is authoritative about whether a matching work order exists.
+    expect(response.status).toBe(200);
+    expect(db.updateQuery.eq).toHaveBeenCalledWith("status", "pending");
+  });
+
+  it("maps pending -> in_progress without a matching work order to a conflict", async () => {
+    const db = setup({ current: "pending", updateError: { code: "23514" } });
+    const response = await PATCH(request("in_progress"));
+
+    expect(response.status).toBe(409);
+    expect((await response.json()).error.code).toBe("INVALID_STATUS_TRANSITION");
+  });
+
   it("rejects pending -> completed before attempting a database update", async () => {
     const db = setup({ current: "pending" });
     const response = await PATCH(request("completed"));
