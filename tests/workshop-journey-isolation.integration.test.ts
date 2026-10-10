@@ -213,6 +213,7 @@ describe("isolated workshop journey and tenant boundaries", () => {
 
   it("prevents cross-workshop customer, vehicle, booking, and work-order access", async () => {
     setup();
+    const local = await createWorkshopJourney();
     useWorkshop(workshopB, userB);
     const foreign = await createWorkshopJourney();
 
@@ -227,11 +228,20 @@ describe("isolated workshop journey and tenant boundaries", () => {
     expect(foreignCustomerVehicle.status).toBe(404);
     expect((await foreignCustomerVehicle.json()).error.code).toBe("CUSTOMER_NOT_FOUND");
 
+    const crossWorkshopVehicleBooking = await createBooking(request("bookings", "POST", {
+      customerId: local.customer.id,
+      vehicleId: foreign.vehicle.id,
+      requestedService: "فحص الفرامل",
+      scheduledAt: "2026-10-12T11:00:00+03:00",
+    }));
+    expect(crossWorkshopVehicleBooking.status).toBe(404);
+    expect((await crossWorkshopVehicleBooking.json()).error.code).toBe("VEHICLE_NOT_FOUND");
+
     const foreignCustomerBooking = await createBooking(request("bookings", "POST", {
       customerId: foreign.customer.id,
       vehicleId: foreign.vehicle.id,
       requestedService: "فحص الفرامل",
-      scheduledAt: "2026-10-12T11:00:00+03:00",
+      scheduledAt: "2026-10-12T11:30:00+03:00",
     }));
     expect(foreignCustomerBooking.status).toBe(404);
     expect((await foreignCustomerBooking.json()).error.code).toBe("CUSTOMER_NOT_FOUND");
@@ -248,10 +258,16 @@ describe("isolated workshop journey and tenant boundaries", () => {
       listBookings(request("bookings")),
       listWorkOrders(request("work-orders")),
     ]);
-    for (const response of [customers, vehicles, bookings, workOrders]) {
-      expect(response.status).toBe(200);
-      expect((await response.json()).data.items).toHaveLength(0);
-    }
+    const [customerList, vehicleList, bookingList, workOrderList] = await Promise.all(
+      [customers, vehicles, bookings, workOrders].map(async (response) => {
+        expect(response.status).toBe(200);
+        return (await response.json()).data.items as Row[];
+      }),
+    );
+    expect(customerList.map((row) => row.id)).toEqual([local.customer.id]);
+    expect(vehicleList.map((row) => row.id)).toEqual([local.vehicle.id]);
+    expect(bookingList.map((row) => row.id)).toEqual([local.booking.id]);
+    expect(workOrderList.map((row) => row.id)).toEqual([local.workOrder.id]);
     expect(tables.customers.filter((row) => row.workshop_id === workshopB)).toHaveLength(1);
     expect(tables.vehicles.filter((row) => row.workshop_id === workshopB)).toHaveLength(1);
     expect(tables.bookings.filter((row) => row.workshop_id === workshopB)).toHaveLength(1);
