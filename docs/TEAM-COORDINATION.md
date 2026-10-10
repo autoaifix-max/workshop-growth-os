@@ -47,18 +47,20 @@ A path is not exclusively owned until the relevant task issue names it. If a tas
 ## Supabase investigation — target date 2026-10-12
 Read-only inspection first. Resolve which Supabase project the repository/deployment actually uses before changing any remote project.
 
-Initial observations (2026-10-10):
-- Project `telujupehfhvsfrtirzn` named `Workshop-Growth-os` is healthy, but the connected account exposes zero public tables and zero migrations. Do not assume this is the target.
-- Project `vzsbyrtqxgvsbttfeazb` named `workshop-growth-os` is healthy and has the core workshop/customer/vehicle/booking/work-order tables with RLS enabled; remote migration history currently lists migrations through `index_foreign_keys` (six entries).
-- Repository README lists `0007_optimize_rls_auth_uid.sql` as the next migration, so a likely discrepancy to verify is whether migration 0007 is missing remotely. This is not proof of the reported runtime error and must not trigger an automatic production migration.
-- No project was modified by this investigation.
+Verified observations (2026-10-10):
+- Project `telujupehfhvsfrtirzn` named `Workshop-Growth-os` is healthy, but the connected account exposes zero public tables and zero migrations. It is not the likely application database.
+- Project `vzsbyrtqxgvsbttfeazb` named `workshop-growth-os` is healthy and has the expected workshop/customer/vehicle/booking/work-order tables; RLS is enabled on all six tenant tables. Remote migration history has six entries through `index_foreign_keys`.
+- Supabase Security Advisor returned no findings for `vzsbyrtqxgvsbttfeazb`.
+- Performance Advisor reports 12 `auth_rls_initplan` warnings because policies evaluate `auth.uid()` per row. Repository migration `0007_optimize_rls_auth_uid.sql` is specifically designed to replace these calls with `(select auth.uid())` while retaining the existing tenant and role predicates. This is the leading safe remediation; it improves policy evaluation without relaxing access controls.
+- Migration 0007 is not recorded in the remote migration history. This explains the outstanding performance warnings if `vzsbyrtqxgvsbttfeazb` is the deployed target, but it does not by itself prove the user's reported runtime failure.
+- No Supabase project was modified during this investigation.
 
 Safe resolution sequence:
-1. Confirm the project's ref in the active app environment variables and hosting settings without printing secrets.
-2. Compare all repository migration files to the remote migration ledger and inspect the exact failing request/error.
-3. Reproduce in ephemeral PostgreSQL/test project; classify project mismatch vs missing migration vs RLS/session/grant/config issue.
-4. Implement the smallest reversible code/migration fix on a branch and verify customer → vehicle → booking → work order plus two-workshop isolation.
-5. Only after review and explicit approval consider any production migration or deployment.
+1. Confirm the project's ref in the active app environment variables and hosting settings without printing secret values.
+2. Reproduce the reported error and inspect relevant logs; distinguish performance warnings from functional errors.
+3. Apply migration 0007 to isolated PostgreSQL and rerun the existing two-workshop RLS integration test.
+4. Confirm the target project, review the diff, and obtain explicit approval before applying the migration to any production project.
+5. Verify customer → vehicle → booking → work order and two-workshop isolation after the approved change.
 
 ## Hosting transition
-Netlify is a proposed temporary replacement for Vercel, not yet verified. Do not switch DNS, secrets, production traffic, or deploy until a Netlify site/account is identified and a preview deployment passes. Keep current production untouched.
+Netlify is the proposed temporary replacement for Vercel, but no Netlify project matching `workshop-growth-os` was found among the connected Netlify projects. Existing projects are unrelated. Do not create/switch production traffic, alter DNS/secrets, or deploy until a dedicated site linked to this repository is explicitly identified and a preview deployment passes.
