@@ -121,7 +121,7 @@ describe("POST /api/v1/work-orders successful workflow", () => {
       created_by: tenantContext.userId,
     });
     expect(db.insertedSingle).toHaveBeenCalledOnce();
-    expect(db.update).toHaveBeenCalledWith("bookings");
+    expect(db.update).toHaveBeenCalledWith({ status: "in_progress", updated_at: expect.any(String) });
     expect(db.updateQuery.eq).toHaveBeenNthCalledWith(1, "id", bookingId);
     expect(db.updateQuery.eq).toHaveBeenNthCalledWith(2, "workshop_id", tenantContext.workshopId);
   });
