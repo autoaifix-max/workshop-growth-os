@@ -14,7 +14,7 @@ export default function HomePage() {
       <header className="topbar">
         <div className="brand">WG</div>
         <div><p className="eyebrow">WORKSHOP GROWTH OS</p><h1>إدارة الورشة، من الاستقبال إلى التسليم</h1></div>
-        <span className="pill">واجهة تشغيل أولية</span>
+        <Link className="pill" href="/login">تسجيل الدخول</Link>
       </header>
       <section className="hero">
         <p className="eyebrow">لوحة إدارة الورشة</p>
