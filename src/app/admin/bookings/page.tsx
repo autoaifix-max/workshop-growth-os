@@ -110,7 +110,7 @@ export default function AdminBookingsPage() {
   return (
     <main className="admin-shell">
       <aside className="admin-sidebar">
-        <Link className="admin-brand" href="/" aria-label="Workshop Growth OS الصفحة الرئيسية"><span className="brand-mark">WG</span><span><strong>Workshop Growth</strong><small>إدارة الورشة</small></span></a>
+        <Link className="admin-brand" href="/" aria-label="Workshop Growth OS الصفحة الرئيسية"><span className="brand-mark">WG</span><span><strong>Workshop Growth</strong><small>إدارة الورشة</small></span></Link>
         <p className="sidebar-caption">مساحة العمل</p>
         <nav className="admin-nav" aria-label="التنقل الرئيسي">
           <Link href="/" className="nav-link"><span className="nav-icon">⌂</span>نظرة عامة</Link>
