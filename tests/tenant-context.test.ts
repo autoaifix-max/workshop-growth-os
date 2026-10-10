@@ -16,14 +16,17 @@ function makeClient(options: {
   membershipError?: { message: string } | null;
 } = {}) {
   const authenticated = options.authenticated ?? true;
-  const query: Record<string, any> = {};
-  query.select = vi.fn(() => query);
-  query.eq = vi.fn(() => query);
-  query.then = (resolve: (value: unknown) => unknown, reject: (reason: unknown) => unknown) =>
-    Promise.resolve({
-      data: options.memberships ?? [membership],
-      error: options.membershipError ?? null,
-    }).then(resolve, reject);
+  const query = {
+    select: vi.fn(),
+    eq: vi.fn(),
+    then: (resolve: (value: unknown) => unknown, reject: (reason: unknown) => unknown) =>
+      Promise.resolve({
+        data: options.memberships ?? [membership],
+        error: options.membershipError ?? null,
+      }).then(resolve, reject),
+  };
+  query.select.mockImplementation(() => query);
+  query.eq.mockImplementation(() => query);
 
   const client = {
     auth: {
