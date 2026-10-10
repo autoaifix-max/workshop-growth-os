@@ -1,0 +1,362 @@
+openapi: 3.1.0
+info:
+  title: Workshop Growth OS API
+  version: 1.0.0-draft
+  description: Draft contract only. Endpoints are not implemented until verified in code.
+servers:
+  - url: /api/v1
+security:
+  - sessionAuth: []
+tags:
+  - name: Health
+  - name: Customers
+  - name: Vehicles
+  - name: Bookings
+  - name: WorkOrders
+paths:
+  /health:
+    get:
+      tags: [Health]
+      summary: Application health check
+      security: []
+      responses:
+        "200":
+          description: Service is responding
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessEnvelope"
+  /customers:
+    get:
+      tags: [Customers]
+      summary: List customers in the authenticated workshop
+      parameters:
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Cursor"
+      responses:
+        "200":
+          description: Customer list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessEnvelope"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    post:
+      tags: [Customers]
+      summary: Create a customer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CustomerInput"
+      responses:
+        "201":
+          description: Customer created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessEnvelope"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+  /vehicles:
+    get:
+      tags: [Vehicles]
+      summary: List vehicles in the authenticated workshop
+      parameters:
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Cursor"
+        - name: customerId
+          in: query
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Vehicle list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessEnvelope"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    post:
+      tags: [Vehicles]
+      summary: Register a vehicle for a customer in the same workshop
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VehicleInput"
+      responses:
+        "201":
+          description: Vehicle created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessEnvelope"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+  /bookings:
+    get:
+      tags: [Bookings]
+      summary: List bookings in the authenticated workshop
+      parameters:
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Cursor"
+        - name: status
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Booking list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessEnvelope"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    post:
+      tags: [Bookings]
+      summary: Create a booking
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [customerId, vehicleId, scheduledAt]
+              properties:
+                customerId:
+                  type: string
+                  format: uuid
+                vehicleId:
+                  type: string
+                  format: uuid
+                scheduledAt:
+                  type: string
+                  format: date-time
+                customerNote:
+                  type: string
+                  maxLength: 2000
+      responses:
+        "201":
+          description: Booking created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessEnvelope"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          description: Schedule or state conflict
+  /work-orders:
+    get:
+      tags: [WorkOrders]
+      summary: List work orders in the authenticated workshop
+      parameters:
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Cursor"
+        - name: status
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Work-order list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessEnvelope"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    post:
+      tags: [WorkOrders]
+      summary: Create a work order
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema:
+            type: string
+            minLength: 8
+            maxLength: 200
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [customerId, vehicleId, description]
+              properties:
+                customerId:
+                  type: string
+                  format: uuid
+                vehicleId:
+                  type: string
+                  format: uuid
+                bookingId:
+                  type: string
+                  format: uuid
+                description:
+                  type: string
+                  minLength: 1
+                  maxLength: 5000
+                odometerKm:
+                  type: integer
+                  minimum: 0
+      responses:
+        "201":
+          description: Work order created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessEnvelope"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          description: Idempotency or state conflict
+components:
+  securitySchemes:
+    sessionAuth:
+      type: apiKey
+      in: cookie
+      name: session
+  parameters:
+    Limit:
+      name: limit
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 25
+    Cursor:
+      name: cursor
+      in: query
+      schema:
+        type: string
+  schemas:
+    SuccessEnvelope:
+      type: object
+      required: [data, meta]
+      properties:
+        data: {}
+        meta:
+          type: object
+          required: [requestId]
+          properties:
+            requestId:
+              type: string
+    CustomerInput:
+      type: object
+      additionalProperties: false
+      required: [name]
+      properties:
+        name:
+          type: string
+          minLength: 2
+          maxLength: 200
+        phone:
+          type: [string, "null"]
+          maxLength: 40
+        email:
+          type: [string, "null"]
+          format: email
+        notes:
+          type: [string, "null"]
+          maxLength: 4000
+    VehicleInput:
+      type: object
+      additionalProperties: false
+      required: [customerId, make, model, modelYear]
+      properties:
+        customerId:
+          type: string
+          format: uuid
+        make:
+          type: string
+          minLength: 1
+          maxLength: 100
+        model:
+          type: string
+          minLength: 1
+          maxLength: 100
+        modelYear:
+          type: integer
+          minimum: 1950
+          maximum: 2100
+        vin:
+          type: [string, "null"]
+          maxLength: 40
+        plateNumber:
+          type: [string, "null"]
+          maxLength: 30
+    ErrorEnvelope:
+      type: object
+      required: [error, meta]
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+            fields:
+              type: object
+        meta:
+          type: object
+          required: [requestId]
+          properties:
+            requestId:
+              type: string
+  responses:
+    ValidationError:
+      description: Invalid input
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorEnvelope"
+    Unauthorized:
+      description: Authentication required
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorEnvelope"
+    Forbidden:
+      description: Insufficient permissions
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorEnvelope"
