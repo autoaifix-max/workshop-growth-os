@@ -3,8 +3,8 @@ export const BOOKING_STATUSES = ["pending", "confirmed", "in_progress", "complet
 export type BookingStatus = (typeof BOOKING_STATUSES)[number];
 
 const nextStatuses: Record<BookingStatus, readonly BookingStatus[]> = {
-  pending: ["confirmed", "cancelled"],
-  confirmed: ["cancelled"],
+  pending: ["confirmed", "in_progress", "cancelled"],
+  confirmed: ["in_progress", "cancelled"],
   in_progress: ["completed", "cancelled"],
   completed: [],
   cancelled: [],
