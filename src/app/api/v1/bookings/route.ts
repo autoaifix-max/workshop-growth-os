@@ -2,8 +2,8 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 import { requireTenantContext } from "@/lib/api/tenant-context";
+import { canTransitionBookingStatus, BOOKING_STATUSES } from "@/lib/booking-status";
 
-const bookingStatuses = ["pending", "confirmed", "in_progress", "completed", "cancelled"] as const;
 const createBookingSchema = z.object({
   customerId: z.string().uuid(),
   vehicleId: z.string().uuid().optional(),
@@ -13,11 +13,11 @@ const createBookingSchema = z.object({
 }).strict();
 const updateBookingSchema = z.object({
   id: z.string().uuid(),
-  status: z.enum(bookingStatuses),
+  status: z.enum(BOOKING_STATUSES),
 }).strict();
 const listQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(100).default(25),
-  status: z.enum(bookingStatuses).optional(),
+  status: z.enum(BOOKING_STATUSES).optional(),
   customerId: z.string().uuid().optional(),
 });
 
@@ -119,13 +119,28 @@ export async function PATCH(request: Request) {
     const parsed = updateBookingSchema.safeParse(body);
     if (!parsed.success) return failure("VALIDATION_ERROR", "رقم الحجز أو الحالة غير صالح", 400);
 
+    const { data: current, error: lookupError } = await client.from("bookings")
+      .select("id,status")
+      .eq("id", parsed.data.id)
+      .eq("workshop_id", tenant.context.workshopId)
+      .maybeSingle();
+    if (lookupError) throw lookupError;
+    if (!current) return failure("BOOKING_NOT_FOUND", "الحجز غير موجود في هذه الورشة", 404);
+    if (!canTransitionBookingStatus(current.status, parsed.data.status)) {
+      return failure("INVALID_STATUS_TRANSITION", "لا يمكن الانتقال من حالة الحجز الحالية إلى الحالة المطلوبة", 409);
+    }
+
     const { data, error } = await client.from("bookings")
       .update({ status: parsed.data.status, updated_at: new Date().toISOString() })
       .eq("id", parsed.data.id)
       .eq("workshop_id", tenant.context.workshopId)
+      .eq("status", current.status)
       .select("id,status,updated_at").maybeSingle();
+    if (error?.code === "23514") {
+      return failure("INVALID_STATUS_TRANSITION", "رفضت قاعدة البيانات انتقال حالة الحجز", 409);
+    }
     if (error) throw error;
-    if (!data) return failure("BOOKING_NOT_FOUND", "الحجز غير موجود في هذه الورشة", 404);
+    if (!data) return failure("BOOKING_STATUS_CONFLICT", "تغيرت حالة الحجز بالتزامن؛ حدّث الصفحة وحاول مجددًا", 409);
     return NextResponse.json({ ok: true, data, error: null });
   } catch {
     return failure("SERVER_ERROR", "تعذر تحديث حالة الحجز. تحقق من إعدادات قاعدة البيانات وترحيل bookings.", 500);
