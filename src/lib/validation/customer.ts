@@ -1,0 +1,1 @@
+import {z} from "zod";export const customerInputSchema=z.object({fullName:z.string().trim().min(2).max(120),phone:z.string().trim().min(8).max(20).regex(/^[+0-9()\-\s]+$/),notes:z.string().trim().max(2000).optional().default("")}).strict();export const customerListQuerySchema=z.object({limit:z.coerce.number().int().min(1).max(100).default(25)});

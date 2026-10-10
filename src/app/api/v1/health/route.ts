@@ -1,0 +1,1 @@
+import { NextResponse } from "next/server"; export function GET(){return NextResponse.json({ok:true,data:{service:"workshop-growth-os",status:"alive",contractVersion:"v1",database:"not-checked"},error:null});}

@@ -1,0 +1,1 @@
+import {z} from "zod";export const vehicleInputSchema=z.object({customerId:z.string().uuid(),plateNumber:z.string().trim().min(2).max(20),make:z.string().trim().min(1).max(60),model:z.string().trim().min(1).max(60),modelYear:z.number().int().min(1950).max(new Date().getUTCFullYear()+1).optional(),vin:z.string().trim().min(5).max(40).optional()}).strict();

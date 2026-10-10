@@ -1,33 +1,25 @@
 # Workshop Growth OS
 
-منصة SaaS عربية لإدارة ورش صيانة السيارات، مبنية لتكون متعددة الورش وآمنة وقابلة للتوسع، مع استعداد لتطبيقات Android وiPhone عبر API مشترك.
+Arabic-first, multi-workshop SaaS for automotive repair operations.
 
-> **الحالة الحالية:** مرحلة تأسيس المنتج والعقود وجرد الأصول. هذا المستودع لا يحتوي بعد على تطبيق تشغيلي. لا تُعامل أي وحدة على أنها جاهزة قبل تنفيذها واختبارها.
+## Current implementation slice
+- Next.js App Router, TypeScript, Arabic RTL starter dashboard.
+- `GET /api/v1/health` health endpoint.
+- Customer and vehicle list/create endpoints under `/api/v1`.
+- Supabase Auth session and membership-derived workshop context.
+- Initial schema and RLS migration: `supabase/migrations/0001_core_customers_vehicles.sql`.
+- Input validation tests and GitHub Actions workflow.
 
-## مبادئ التنفيذ
-- العربية وRTL وتجربة جوال أولًا.
-- عزل بيانات كل ورشة في الخادم وقاعدة البيانات.
-- API بإصدار `/api/v1` ومنطق أعمال مستقل عن الواجهة.
-- إعادة استخدام الأصول المثبتة بدل تكرار Runtime أو Router أو Auth أو Database.
-- عدم اعتماد تكامل جهاز فحص أو WhatsApp قبل إثبات طريقة الربط وشروط المورد.
-- لا إطلاق قبل نجاح اختبارات المجال والأمان والبناء وقبول المستخدم.
+## Local setup
+1. Use Node.js 22 and npm.
+2. Copy `.env.example` to `.env.local`.
+3. Set the Supabase project URL and anon key.
+4. Apply the migration to a disposable Supabase project before using authenticated APIs.
+5. Create a workshop and membership for a test user through a controlled admin process. Public tenant bootstrap is not included.
+6. Run `npm install`, then `npm run dev`, and visit `http://localhost:3000`.
 
-## الوثائق الأساسية
-- [جرد أصول DiagPro](docs/architecture/asset-audit.md)
-- [نطاق المنتج](docs/architecture/product-scope.md)
-- [عقود API](docs/architecture/api-contracts.md)
-- [عزل بيانات الورش](docs/architecture/tenant-isolation.md)
-- [سير عمل الوكلاء والتطوير](docs/development/agent-workflow.md)
-- [بوابات الاختبار والإطلاق](docs/development/testing-and-release-gates.md)
-- [خطة التنفيذ](docs/roadmap/implementation-plan.md)
+## Verification
+Run `npm run lint`, `npm run typecheck`, `npm test`, and `npm run build`.
 
-## الأصول السابقة التي تجري مراجعتها
-- [Digital DiagPro](https://github.com/autoaifix-max/digital-diagpro): مرشح لإعادة استخدام تدفقات الورشة بعد مراجعة العزل والأمان.
-- [DiagPro Knowledge](https://github.com/autoaifix-max/diagpro-knowledge): مرشح لخدمة معرفة تشخيصية مستقلة.
-- [DiagPro Manager V1](https://github.com/ahmedzohaidz/diagpro-manager-v1): يحتاج إلى فحص محلي إضافي قبل الحكم على حالته.
-
-## الخطوة التالية
-فحص نسخة محلية كاملة من Digital DiagPro وتشغيل الاختبارات والتحقق من migrations وRLS. بعد ذلك يصدر قرار موثق لكل وحدة: إعادة استخدام، تعديل، أو إعادة بناء.
-
-## الأسرار
-لا ترفع ملفات `.env` أو مفاتيح الخدمة أو بيانات العملاء إلى Git. استخدم `.env.example` بقيم وهمية فقط.
+## Limits
+The dashboard is a starter shell, not a finished workflow. The migration has not been applied to a live Supabase project and no build/test pass is claimed until CI reports results. Two-tenant database integration tests, auth screens, tenant onboarding, update/delete, cursor pagination, audit events, bookings and work orders remain outstanding. Never expose Supabase service-role credentials in browser code or application routes.
