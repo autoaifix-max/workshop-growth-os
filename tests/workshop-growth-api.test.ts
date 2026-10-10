@@ -28,8 +28,8 @@ function setup() {
         table: string;
         filters: Array<[string, unknown]>;
         select: (...args: unknown[]) => unknown;
-        eq: (...args: unknown[]) => unknown;
-        gte: (...args: unknown[]) => unknown;
+        eq: (column: string, value: unknown) => unknown;
+        gte: (column: string, value: unknown) => unknown;
         then: (resolve: (value: unknown) => unknown, reject?: (reason: unknown) => unknown) => Promise<unknown>;
       } = {
         table,
