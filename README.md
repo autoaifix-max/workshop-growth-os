@@ -12,6 +12,7 @@ Arabic-first, multi-workshop SaaS for automotive repair operations.
 - Active-workshop policies for workshops, customers, and vehicles: `supabase/migrations/0004_enforce_active_workshop_status.sql`.
 - Active-workshop policies for bookings and work orders: `supabase/migrations/0005_enforce_active_workshop_status_for_bookings_and_work_orders.sql`.
 - Foreign-key support indexes: `supabase/migrations/0006_index_foreign_keys.sql`.
+- RLS policy optimization for `auth.uid()`: `supabase/migrations/0007_optimize_rls_auth_uid.sql`.
 - Arabic RTL bookings admin page at `/admin/bookings`, reading and updating bookings through the API.
 - Supabase Auth session and membership-derived workshop context.
 - Core schema: `supabase/migrations/0001_core_customers_vehicles.sql`.
@@ -33,7 +34,7 @@ Allowed statuses: `pending`, `confirmed`, `in_progress`, `completed`, `cancelled
 1. Use Node.js 22 and npm.
 2. Copy `.env.example` to `.env.local`.
 3. Set the Supabase project URL and anon key.
-4. On a fresh test project, apply migrations in version order: `0001_core_customers_vehicles.sql`, `0002_bookings.sql`, `0003_work_orders.sql`, `0004_enforce_active_workshop_status.sql`, `0005_enforce_active_workshop_status_for_bookings_and_work_orders.sql`, then `0006_index_foreign_keys.sql`.
+4. On a fresh test project, apply migrations in version order: `0001_core_customers_vehicles.sql`, `0002_bookings.sql`, `0003_work_orders.sql`, `0004_enforce_active_workshop_status.sql`, `0005_enforce_active_workshop_status_for_bookings_and_work_orders.sql`, `0006_index_foreign_keys.sql`, then `0007_optimize_rls_auth_uid.sql`.
 5. On an existing project, confirm which migrations have already been applied before applying any new migration. Apply policy migrations only after the schema migrations they depend on are present.
 6. Create a workshop and membership for a test user through a controlled admin process. Public tenant bootstrap is not included.
 7. Run `npm install`, then `npm run dev`, and visit `http://localhost:3000/admin/bookings`.
