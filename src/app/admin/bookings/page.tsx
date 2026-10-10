@@ -105,6 +105,23 @@ export default function AdminBookingsPage() {
     } finally { setSaving(false); }
   }
 
+  async function convertToWorkOrder(booking: Booking) {
+    setSaving(true);
+    setActionMessage("");
+    try {
+      const response = await fetch("/api/v1/work-orders", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ bookingId: booking.id }),
+      });
+      const payload = await response.json() as ApiResponse;
+      if (!response.ok || !payload.ok) throw new Error(payload.error?.message || "تعذر تحويل الحجز إلى أمر عمل.");
+      setActionMessage("تم إنشاء/استرجاع أمر العمل المرتبط بالحجز.");
+      await loadBookings();
+    } catch (error) {
+      setActionMessage(error instanceof Error ? error.message : "تعذر تحويل الحجز إلى أمر عمل.");
+    } finally { setSaving(false); }
+  }
+
   const selectedBooking = bookings.find((booking) => booking.id === selected);
 
   return (
@@ -153,7 +170,7 @@ export default function AdminBookingsPage() {
               {!loading && filteredBookings.length === 0 && <div className="empty-state"><span>⌕</span><strong>{loadError ? "لا يمكن عرض النتائج" : "لا توجد حجوزات مطابقة"}</strong><p>{loadError ? "تحقق من الاتصال والإعدادات ثم أعد المحاولة." : "ستظهر الحجوزات المسجلة هنا عند توفرها."}</p></div>}
               {loading && <div className="empty-state"><strong>جارٍ تحميل الحجوزات…</strong></div>}
             </div>
-            {selectedBooking && <div className="booking-detail"><div><p className="admin-eyebrow">تفاصيل الحجز</p><h3>{selectedBooking.id.slice(0, 8)} · {customerName(selectedBooking)}</h3><p>{vehicleName(selectedBooking)} — {plateNumber(selectedBooking)}</p><p>الخدمة المطلوبة: {selectedBooking.requested_service}</p><p>الموعد: {formatDate(selectedBooking.scheduled_at)}، الساعة {formatTime(selectedBooking.scheduled_at)}</p><p>الحالة الحالية: {statusLabels[selectedBooking.status]}</p>{selectedBooking.notes && <p>ملاحظات: {selectedBooking.notes}</p>}</div><div className="booking-toolbar"><label><span>تغيير الحالة</span><select value={selectedBooking.status} disabled={saving} onChange={(event) => void updateStatus(selectedBooking, event.target.value as BookingStatus)}>{filters.filter((item) => item.key !== "all").map((item) => <option key={item.key} value={item.key}>{item.label}</option>)}</select></label></div></div>}
+            {selectedBooking && <div className="booking-detail"><div><p className="admin-eyebrow">تفاصيل الحجز</p><h3>{selectedBooking.id.slice(0, 8)} · {customerName(selectedBooking)}</h3><p>{vehicleName(selectedBooking)} — {plateNumber(selectedBooking)}</p><p>الخدمة المطلوبة: {selectedBooking.requested_service}</p><p>الموعد: {formatDate(selectedBooking.scheduled_at)}، الساعة {formatTime(selectedBooking.scheduled_at)}</p><p>الحالة الحالية: {statusLabels[selectedBooking.status]}</p>{selectedBooking.notes && <p>ملاحظات: {selectedBooking.notes}</p>}</div><div className="booking-toolbar"><label><span>تغيير الحالة</span><select value={selectedBooking.status} disabled={saving} onChange={(event) => void updateStatus(selectedBooking, event.target.value as BookingStatus)}>{filters.filter((item) => item.key !== "all").map((item) => <option key={item.key} value={item.key}>{item.label}</option>)}</select></label>{selectedBooking.status !== "completed" && selectedBooking.status !== "cancelled" && <button className="primary-button" type="button" disabled={saving} onClick={() => void convertToWorkOrder(selectedBooking)}>{saving ? "جارٍ التنفيذ…" : "تحويل إلى أمر عمل"}</button>}</div></div>}
             {actionMessage && <p role="status" className="table-footer">{actionMessage}</p>}
             <div className="table-footer"><span>{loading ? "جارٍ الاتصال بالخدمة…" : "مصدر البيانات: /api/v1/bookings"}</span><span>{bookings.length.toLocaleString("ar-SA")} حجز مسجل</span></div>
           </section>
