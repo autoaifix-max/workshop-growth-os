@@ -30,6 +30,7 @@ export default function WorkshopGrowthPage() {
   const loadMetrics = useCallback(async () => {
     setLoading(true);
     setError("");
+    setMetrics(null);
     try {
       const response = await fetch("/api/v1/growth", { cache: "no-store" });
       const payload = await response.json() as ApiResponse;
