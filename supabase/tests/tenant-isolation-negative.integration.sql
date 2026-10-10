@@ -4,7 +4,8 @@
 begin;
 insert into auth.users(id) values
  ('11111111-1111-4111-8111-111111111111'),
- ('22222222-2222-4222-8222-222222222222');
+ ('22222222-2222-4222-8222-222222222222'),
+ ('33333333-3333-4333-8333-333333333333');
 insert into public.workshops(id,name,slug,status) values
  ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa','Workshop A','workshop-a','active'),
  ('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb','Workshop B','workshop-b','active');
@@ -57,6 +58,23 @@ begin
   raise exception 'Composite FK allowed cross-workshop work-order/booking link';
  exception when foreign_key_violation then null;
  end;
-end $$;
+end $;
+
+-- A valid authenticated user with no active workshop membership must not see or mutate tenant data.
+select set_config('request.jwt.claim.sub','33333333-3333-4333-8333-333333333333',true);
+do $
+declare n integer;
+begin
+ select count(*) into n from public.customers; if n <> 0 then raise exception 'user without membership can read customers'; end if;
+ select count(*) into n from public.vehicles; if n <> 0 then raise exception 'user without membership can read vehicles'; end if;
+ select count(*) into n from public.bookings; if n <> 0 then raise exception 'user without membership can read bookings'; end if;
+ select count(*) into n from public.work_orders; if n <> 0 then raise exception 'user without membership can read work orders'; end if;
+ begin
+  insert into public.customers(workshop_id,full_name,phone,created_by)
+  values ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa','No Membership','0500000088','33333333-3333-4333-8333-333333333333');
+  raise exception 'RLS allowed customer insert without active membership';
+ exception when insufficient_privilege then null;
+ end;
+end $;
 reset role;
 rollback;
