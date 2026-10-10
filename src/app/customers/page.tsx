@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { redirectIfUnauthorized } from "@/lib/auth/redirect-to-login";
 import { FormEvent, useCallback, useEffect, useState } from "react";
 
 type Customer = {
@@ -40,6 +41,7 @@ export default function CustomersPage() {
     setLoadError("");
     try {
       const response = await fetch("/api/v1/customers?limit=100", { cache: "no-store" });
+      if (redirectIfUnauthorized(response)) return;
       const payload = await response.json() as ListResponse;
       if (!response.ok || !payload.ok || !payload.data) {
         throw new Error(payload.error?.message || (response.status === 401
@@ -67,6 +69,7 @@ export default function CustomersPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ fullName, phone, notes }),
       });
+      if (redirectIfUnauthorized(response)) return;
       const payload = await response.json() as CreateResponse;
       if (!response.ok || !payload.ok || !payload.data) {
         throw new Error(payload.error?.message || "تعذر حفظ العميل.");
