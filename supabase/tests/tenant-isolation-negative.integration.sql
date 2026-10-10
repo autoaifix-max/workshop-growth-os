@@ -83,6 +83,54 @@ begin
  end;
 end $tenant$;
 
+
+-- Booking status transitions must be valid even when a caller updates Supabase directly.
+select set_config('request.jwt.claim.sub','11111111-1111-4111-8111-111111111111',true);
+do $tenant$
+declare affected integer;
+begin
+  -- pending -> confirmed is permitted.
+  update public.bookings set status = 'confirmed'
+  where id = 'aaaaaaaa-0005-4000-8000-000000000001';
+  get diagnostics affected = row_count;
+  if affected <> 1 then raise exception 'Valid pending -> confirmed transition failed'; end if;
+
+  -- confirmed -> completed skips required workflow states and must be rejected.
+  begin
+    update public.bookings set status = 'completed'
+    where id = 'aaaaaaaa-0005-4000-8000-000000000001';
+    raise exception 'Database allowed confirmed -> completed transition';
+  exception when check_violation then null;
+  end;
+
+  -- Moving directly to in_progress is forbidden until a matching work order exists.
+  begin
+    update public.bookings set status = 'in_progress'
+    where id = 'aaaaaaaa-0005-4000-8000-000000000001';
+    raise exception 'Database allowed in_progress without a work order';
+  exception when check_violation then null;
+  end;
+
+  -- The work-order conversion path can move a pending booking to in_progress once its work order exists.
+  update public.bookings set status = 'in_progress'
+  where id = 'aaaaaaaa-0003-4000-8000-000000000001';
+  get diagnostics affected = row_count;
+  if affected <> 1 then raise exception 'Work-order-backed transition to in_progress failed'; end if;
+
+  update public.bookings set status = 'completed'
+  where id = 'aaaaaaaa-0003-4000-8000-000000000001';
+  get diagnostics affected = row_count;
+  if affected <> 1 then raise exception 'Valid in_progress -> completed transition failed'; end if;
+
+  -- Completed bookings are terminal.
+  begin
+    update public.bookings set status = 'cancelled'
+    where id = 'aaaaaaaa-0003-4000-8000-000000000001';
+    raise exception 'Database allowed completed -> cancelled transition';
+  exception when check_violation then null;
+  end;
+end $tenant$;
+
 -- Database-level role regression tests: keep direct Supabase writes aligned with API permissions.
 select set_config('request.jwt.claim.sub','44444444-4444-4444-8444-444444444444',true);
 do $tenant$
