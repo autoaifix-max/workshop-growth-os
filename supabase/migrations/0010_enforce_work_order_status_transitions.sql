@@ -96,7 +96,7 @@ create or replace function public.sync_booking_status_from_work_order()
 returns trigger
 language plpgsql
 security definer
-set search_path = pg_catalog, public
+set search_path = pg_catalog
 as $$
 declare
   booking_status text;
