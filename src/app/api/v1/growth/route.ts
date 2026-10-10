@@ -2,14 +2,19 @@ import { NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 import { requireTenantContext } from "@/lib/api/tenant-context";
 
+const privateNoStore = { "Cache-Control": "private, no-store" };
+
 const fail = (code: string, message: string, status: number) =>
-  NextResponse.json({ ok: false, data: null, error: { code, message } }, { status });
+  NextResponse.json({ ok: false, data: null, error: { code, message } }, { status, headers: privateNoStore });
 
 export async function GET() {
   try {
     const client = await getSupabaseServerClient();
     const tenant = await requireTenantContext(client);
-    if (!tenant.ok) return tenant.response;
+    if (!tenant.ok) {
+      tenant.response.headers.set("Cache-Control", "private, no-store");
+      return tenant.response;
+    }
 
     // Read-only metrics. Every query is scoped to the active membership's workshop.
     const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
@@ -59,7 +64,7 @@ export async function GET() {
         ],
       },
       error: null,
-    }, { headers: { "Cache-Control": "private, no-store" } });
+    }, { headers: privateNoStore });
   } catch {
     return fail("SERVER_ERROR", "تعذر حساب مؤشرات الورشة. تحقق من إعدادات قاعدة البيانات.", 500);
   }
