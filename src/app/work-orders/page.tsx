@@ -105,7 +105,7 @@ export default function WorkOrdersPage() {
           <section className="admin-page-intro">
             <p className="admin-eyebrow">متابعة التنفيذ</p>
             <h1>أوامر العمل</h1>
-            <p>تابع تقدم التشخيص والإصلاح. تغيير الحالة يخضع لقواعد سير العمل والصلاحيات، وعند اكتمال أمر العمل يُحدّث الحجز المرتبط تلقائيًا.</p>
+            <p>تابع تقدم التشخيص والإصلاح. تغيير الحالة يخضع لقواعد سير العمل والصلاحيات، وعند إكمال أمر العمل أو إلغائه تُزامَن حالة الحجز المرتبط تلقائيًا.</p>
           </section>
           <section className="booking-panel">
             <div className="panel-heading"><div><h2>قائمة أوامر العمل</h2><p>{items.length.toLocaleString("ar-SA")} أمر عمل محمّل</p></div><button className="secondary-button" type="button" onClick={() => void load()} disabled={loading}>تحديث</button></div>
