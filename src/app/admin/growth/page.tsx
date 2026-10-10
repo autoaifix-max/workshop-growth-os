@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { redirectIfUnauthorized } from "@/lib/auth/redirect-to-login";
 import { useCallback, useEffect, useState } from "react";
 
 type GrowthMetrics = {
@@ -33,6 +34,7 @@ export default function WorkshopGrowthPage() {
     setMetrics(null);
     try {
       const response = await fetch("/api/v1/growth", { cache: "no-store" });
+      if (redirectIfUnauthorized(response)) return;
       const payload = await response.json() as ApiResponse;
       if (!response.ok || !payload.ok || !payload.data) {
         throw new Error(payload.error?.message || (response.status === 401
