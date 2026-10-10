@@ -152,8 +152,8 @@ export default function VehiclesPage() {
             {!loadError && items.length > 0 && <div className="booking-table-wrap"><table className="booking-table"><thead><tr><th>المركبة</th><th>اللوحة</th><th>العميل</th><th>التسجيل</th></tr></thead><tbody>{items.map((item) => <tr key={item.id}><td><strong>{item.make} {item.model}</strong><small className="table-subline">{item.model_year ?? "سنة الصنع غير محددة"}{item.vin ? " · VIN مسجل" : ""}</small></td><td>{item.plate_number}</td><td>{customerNames.get(item.customer_id) ?? "عميل غير معروف"}</td><td>{dateFormat(item.created_at)}</td></tr>)}</tbody></table></div>}
             <div className="table-footer"><span>المصدر: API الورشة</span><Link href="/admin/bookings" className="wg-text-link">الانتقال للحجوزات ←</Link></div>
           </article>
-  </main>
-      </section>
+          </section>
+        </main>
       </section>
     </main>
   );
