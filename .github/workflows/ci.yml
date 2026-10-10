@@ -69,3 +69,7 @@ jobs:
         env:
           PGPASSWORD: postgres
         run: psql -h localhost -U postgres -d workshop_test -v ON_ERROR_STOP=1 -f supabase/tests/tenant-isolation.integration.sql
+      - name: Verify cross-tenant writes are rejected
+        env:
+          PGPASSWORD: postgres
+        run: psql -h localhost -U postgres -d workshop_test -v ON_ERROR_STOP=1 -f supabase/tests/tenant-isolation-negative.integration.sql
