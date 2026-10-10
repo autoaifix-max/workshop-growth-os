@@ -20,7 +20,7 @@ const tenantContext = {
   role: "owner" as const,
 };
 
-function setup(workshopId = tenantContext.workshopId) {
+function setup(workshopId = tenantContext.workshopId, queryFails = false) {
   const activeTenant = { ...tenantContext, workshopId };
   const queries: Array<{ table: string; filters: Array<[string, unknown]> }> = [];
   const client = {
@@ -48,7 +48,7 @@ function setup(workshopId = tenantContext.workshopId) {
             : status === "completed" ? 2
             : status === "cancelled" ? 2
             : 10;
-          return Promise.resolve({ count, error: null }).then(resolve, reject);
+          return Promise.resolve({ count, error: queryFails ? new Error("query failed") : null }).then(resolve, reject);
         },
       };
       return query;
@@ -83,6 +83,18 @@ describe("workshop growth metrics API", () => {
     const response = await GET();
     expect(response.status).toBe(500);
     expect(response.headers.get("Cache-Control")).toBe("private, no-store");
+  });
+
+  it("does not return partial metrics when a database query fails", async () => {
+    setup(tenantContext.workshopId, true);
+
+    const response = await GET();
+    const body = await response.json();
+
+    expect(response.status).toBe(500);
+    expect(response.headers.get("Cache-Control")).toBe("private, no-store");
+    expect(body.ok).toBe(false);
+    expect(body.data).toBeNull();
   });
 
   it("scopes every metric query to the active workshop and reports transparent counts", async () => {
