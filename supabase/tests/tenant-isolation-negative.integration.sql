@@ -248,5 +248,18 @@ begin
 end $tenant$;
 
 
+
+-- SECURITY DEFINER trigger functions must not be executable through PostgREST RPC.
+do $security$
+begin
+  if has_function_privilege('anon', 'public.sync_booking_status_from_work_order()', 'EXECUTE') then
+    raise exception 'Anonymous role can execute trigger-only booking synchronization function';
+  end if;
+  if has_function_privilege('authenticated', 'public.sync_booking_status_from_work_order()', 'EXECUTE') then
+    raise exception 'Authenticated role can execute trigger-only booking synchronization function';
+  end if;
+end
+$security$;
+
 reset role;
 rollback;
