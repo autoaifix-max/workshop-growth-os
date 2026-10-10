@@ -58,11 +58,11 @@ begin
   raise exception 'Composite FK allowed cross-workshop work-order/booking link';
  exception when foreign_key_violation then null;
  end;
-end $;
+end $tenant$;
 
 -- A valid authenticated user with no active workshop membership must not see or mutate tenant data.
 select set_config('request.jwt.claim.sub','33333333-3333-4333-8333-333333333333',true);
-do $
+do $tenant$
 declare n integer;
 begin
  select count(*) into n from public.customers; if n <> 0 then raise exception 'user without membership can read customers'; end if;
@@ -75,6 +75,6 @@ begin
   raise exception 'RLS allowed customer insert without active membership';
  exception when insufficient_privilege then null;
  end;
-end $;
+end $tenant$;
 reset role;
 rollback;
