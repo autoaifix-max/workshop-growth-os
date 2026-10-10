@@ -8,6 +8,7 @@ This procedure is a temporary, auditable alternative to a public tenant-bootstra
 - Use a disposable development/test project only for this phase. Do not run this procedure against production.
 - Confirm the required migrations have already been applied. Do not apply migrations as part of onboarding.
 - Create/invite the intended owner through **Supabase Authentication → Users**. Do not insert directly into `auth.users`. Copy the resulting Auth user UUID from the dashboard.
+- For invitation links, configure Supabase Auth's allowed redirect URLs to include `https://workshop-growth-os.netlify.app/auth/callback` and set this as the invite redirect. The callback exchanges the invitation code for a session, then routes the invited user to `/set-password`. Confirm the actual site URL and redirect allow-list before sending the invite.
 - Use the Supabase SQL Editor as a trusted project administrator. Never place a service-role key in browser code, app responses, or source control.
 
 ## Step 1 — Preflight (read-only)
