@@ -19,3 +19,53 @@ jobs:
       - run: npm run typecheck
       - run: npm test
       - run: npm run build
+
+  postgres-tenant-isolation:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: workshop_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d workshop_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install PostgreSQL client
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes postgresql-client
+      - name: Bootstrap isolated Supabase auth primitives
+        env:
+          PGPASSWORD: postgres
+        run: |
+          psql -h localhost -U postgres -d workshop_test -v ON_ERROR_STOP=1 <<'SQL'
+          create role anon nologin;
+          create role authenticated nologin;
+          create schema auth;
+          create table auth.users (id uuid primary key);
+          create function auth.uid() returns uuid
+            language sql stable
+            as $$ select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $$;
+          grant usage on schema auth to authenticated;
+          grant execute on function auth.uid() to authenticated;
+          SQL
+      - name: Apply all migrations to disposable PostgreSQL
+        env:
+          PGPASSWORD: postgres
+        run: |
+          for migration in supabase/migrations/*.sql; do
+            echo "Applying $migration"
+            psql -h localhost -U postgres -d workshop_test -v ON_ERROR_STOP=1 -f "$migration"
+          done
+      - name: Verify RLS and tenant separation with authenticated role
+        env:
+          PGPASSWORD: postgres
+        run: psql -h localhost -U postgres -d workshop_test -v ON_ERROR_STOP=1 -f supabase/tests/tenant-isolation.integration.sql
