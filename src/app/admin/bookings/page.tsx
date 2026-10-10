@@ -147,9 +147,10 @@ export default function AdminBookingsPage() {
         <nav className="admin-nav" aria-label="التنقل الرئيسي">
           <Link href="/" className="nav-link"><span className="nav-icon">⌂</span>نظرة عامة</Link>
           <a href="/admin/bookings" className="nav-link nav-link-active"><span className="nav-icon">▦</span>الحجوزات <span className="nav-count">{bookings.length}</span></a>
-          <a href="/customers" className="nav-link" aria-disabled="true"><span className="nav-icon">♙</span>العملاء</a>
-          <a href="/vehicles" className="nav-link" aria-disabled="true"><span className="nav-icon">▱</span>السيارات</a>
-          <a href="/work-orders" className="nav-link" aria-disabled="true"><span className="nav-icon">☷</span>أوامر العمل</a>
+          <Link href="/customers" className="nav-link"><span className="nav-icon">♙</span>العملاء</Link>
+          <Link href="/vehicles" className="nav-link"><span className="nav-icon">▱</span>السيارات</Link>
+          <Link href="/work-orders" className="nav-link"><span className="nav-icon">☷</span>أوامر العمل</Link>
+          <Link href="/admin/growth" className="nav-link"><span className="nav-icon">↗</span>مؤشرات النمو</Link>
         </nav>
         <div className="sidebar-bottom"><span className="online-dot" />اتصال مباشر<br /><small>الحجوزات من API</small></div>
       </aside>
