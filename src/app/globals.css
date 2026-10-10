@@ -50,3 +50,19 @@ textarea.wg-input { resize:vertical; line-height:1.7; }
 
 /* Keep workspace navigation usable on small screens and align forms with page spacing. */
 @media(max-width:700px){.admin-nav .nav-link:not(.nav-link-active){display:flex!important}.wg-page-grid{grid-template-columns:minmax(0,1fr)}.wg-form{grid-template-columns:minmax(0,1fr)}.wg-field-wide,.wg-submit-row{grid-column:auto}.booking-content{padding:20px 13px}}
+
+/* Authentication and owner invitation flow */
+.auth-shell{min-height:100vh;display:grid;place-items:center;padding:24px;background:#f6f7f9}
+.auth-card{width:min(100%,460px);padding:clamp(22px,5vw,34px);border:1px solid #e7e9ed;border-radius:18px;background:#fff;box-shadow:0 10px 35px rgba(20,25,35,.06)}
+.auth-brand{display:flex;align-items:center;gap:11px;margin-bottom:28px;padding-bottom:18px;border-bottom:1px solid #eceef1;color:inherit;text-decoration:none}
+.auth-brand strong,.auth-brand small{display:block}
+.auth-brand small{margin-top:4px;color:#8a9099;font-size:11px}
+.auth-card h1{margin:0 0 10px;font-size:27px}
+.auth-description{margin:0 0 22px;color:#777e89;font-size:13px;line-height:1.9}
+.auth-form{display:grid;gap:15px;margin:20px 0}
+.auth-form .booking-create-field input{min-height:44px}
+.auth-submit{width:100%;justify-content:center;min-height:44px;font-size:13px}
+.auth-notice,.auth-error,.auth-footnote{padding:11px 12px;border-radius:9px;font-size:12px;line-height:1.8}
+.auth-notice{background:#e9f9ef;color:#146b37}
+.auth-error{background:#fff0f0;color:#9d2020}
+.auth-footnote{padding:0;color:#7b818a}
