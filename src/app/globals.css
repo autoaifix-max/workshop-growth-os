@@ -50,3 +50,18 @@ textarea.wg-input { resize:vertical; line-height:1.7; }
 
 /* Keep workspace navigation usable on small screens and align forms with page spacing. */
 @media(max-width:700px){.admin-nav .nav-link:not(.nav-link-active){display:flex!important}.wg-page-grid{grid-template-columns:minmax(0,1fr)}.wg-form{grid-template-columns:minmax(0,1fr)}.wg-field-wide,.wg-submit-row{grid-column:auto}.booking-content{padding:20px 13px}}
+
+/* Booking creation form */
+.booking-create-form{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:13px;padding:0 22px 22px}
+.booking-create-field{display:flex;min-width:0;flex-direction:column;gap:7px;font-size:12px;font-weight:700;color:#34373b}
+.booking-create-field input,.booking-create-field select,.booking-create-field textarea{width:100%;min-width:0;border:1px solid #dfe3e8;border-radius:9px;background:#fff;padding:10px 11px;color:#202124;font:inherit;font-weight:400}
+.booking-create-field input:focus,.booking-create-field select:focus,.booking-create-field textarea:focus{outline:2px solid #d8b300;outline-offset:1px;border-color:#bda000}
+.booking-create-field textarea{resize:vertical;line-height:1.7}
+.booking-create-span-2{grid-column:span 2}
+.booking-create-full{grid-column:1 / -1}
+.booking-create-actions{grid-column:1 / -1;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.booking-create-feedback{margin:0 22px 14px;padding:10px 12px;border-radius:9px;background:#fff8d1;color:#5b4c00;font-size:12px;line-height:1.7}
+.booking-create-feedback a{font-weight:700;color:#705d00;text-decoration:none}
+.booking-create-error{color:#9d2020}
+.booking-create-success{font-size:12px;color:#146b37}
+@media(max-width:700px){.booking-create-form{grid-template-columns:minmax(0,1fr);padding:0 14px 16px}.booking-create-span-2,.booking-create-full,.booking-create-actions{grid-column:auto}.booking-create-panel .panel-heading{padding:16px 14px}.booking-create-feedback{margin:0 14px 12px}}
