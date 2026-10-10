@@ -53,7 +53,15 @@ export async function POST(request: Request) {
       .select("id,booking_id,customer_id,vehicle_id,requested_service,status,notes,created_at,updated_at")
       .eq("booking_id", booking.id).eq("workshop_id", tenant.context.workshopId).maybeSingle();
     if (existingError) throw existingError;
-    if (existing) return NextResponse.json({ ok: true, data: existing, error: null });
+    if (existing) {
+      // A previous attempt may have created the work order but failed before
+      // updating the booking. Make retries repair that state before returning.
+      const { error: bookingUpdateError } = await client.from("bookings")
+        .update({ status: "in_progress", updated_at: new Date().toISOString() })
+        .eq("id", booking.id).eq("workshop_id", tenant.context.workshopId);
+      if (bookingUpdateError) throw bookingUpdateError;
+      return NextResponse.json({ ok: true, data: existing, error: null });
+    }
 
     const { data, error } = await client.from("work_orders").insert({
       workshop_id: tenant.context.workshopId,
@@ -69,7 +77,15 @@ export async function POST(request: Request) {
       const { data: concurrent } = await client.from("work_orders")
         .select("id,booking_id,customer_id,vehicle_id,requested_service,status,notes,created_at,updated_at")
         .eq("booking_id", booking.id).eq("workshop_id", tenant.context.workshopId).maybeSingle();
-      if (concurrent) return NextResponse.json({ ok: true, data: concurrent, error: null });
+      if (concurrent) {
+        // Concurrent requests can win the unique booking_id constraint. Keep
+        // the booking status consistent with the work order in this path too.
+        const { error: bookingUpdateError } = await client.from("bookings")
+          .update({ status: "in_progress", updated_at: new Date().toISOString() })
+          .eq("id", booking.id).eq("workshop_id", tenant.context.workshopId);
+        if (bookingUpdateError) throw bookingUpdateError;
+        return NextResponse.json({ ok: true, data: concurrent, error: null });
+      }
     }
     if (error) throw error;
 
