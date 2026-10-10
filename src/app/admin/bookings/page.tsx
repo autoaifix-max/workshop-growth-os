@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { getAllowedBookingStatusTransitions } from "@/lib/booking-status";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 
 type BookingStatus = "pending" | "confirmed" | "in_progress" | "completed" | "cancelled";
 type Booking = {
@@ -41,6 +41,150 @@ function vehicleName(booking: Booking) {
   return [booking.vehicles.make, booking.vehicles.model, booking.vehicles.model_year].filter(Boolean).join(" ");
 }
 function plateNumber(booking: Booking) { return booking.vehicles?.plate_number ?? "—"; }
+
+type CustomerOption = { id: string; full_name: string; phone: string };
+type VehicleOption = { id: string; customer_id: string; plate_number: string; make: string; model: string; model_year: number | null };
+type OptionsResponse<T> = { ok: boolean; data?: { items?: T[] }; error?: { message?: string } | null };
+type CreateResponse = { ok: boolean; data?: unknown; error?: { message?: string } | null };
+
+function CreateBookingPanel({ onCreated }: { onCreated: () => Promise<void> }) {
+  const [customers, setCustomers] = useState<CustomerOption[]>([]);
+  const [vehicles, setVehicles] = useState<VehicleOption[]>([]);
+  const [customerId, setCustomerId] = useState("");
+  const [vehicleId, setVehicleId] = useState("");
+  const [requestedService, setRequestedService] = useState("");
+  const [scheduledAt, setScheduledAt] = useState("");
+  const [notes, setNotes] = useState("");
+  const [loadingOptions, setLoadingOptions] = useState(true);
+  const [optionsError, setOptionsError] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const [message, setMessage] = useState("");
+
+  useEffect(() => {
+    let active = true;
+    async function loadOptions() {
+      setLoadingOptions(true);
+      setOptionsError("");
+      try {
+        const [customersResponse, vehiclesResponse] = await Promise.all([
+          fetch("/api/v1/customers?limit=100", { cache: "no-store" }),
+          fetch("/api/v1/vehicles", { cache: "no-store" }),
+        ]);
+        const customersPayload = await customersResponse.json() as OptionsResponse<CustomerOption>;
+        const vehiclesPayload = await vehiclesResponse.json() as OptionsResponse<VehicleOption>;
+        if (!customersResponse.ok || !customersPayload.ok || !customersPayload.data ||
+            !vehiclesResponse.ok || !vehiclesPayload.ok || !vehiclesPayload.data) {
+          throw new Error(customersPayload.error?.message || vehiclesPayload.error?.message ||
+            (customersResponse.status === 401 || vehiclesResponse.status === 401
+              ? "يلزم تسجيل الدخول لإنشاء حجز."
+              : "تعذر تحميل العملاء والمركبات."));
+        }
+        if (!active) return;
+        const loadedCustomers = customersPayload.data.items ?? [];
+        setCustomers(loadedCustomers);
+        setVehicles(vehiclesPayload.data.items ?? []);
+        setCustomerId((current) => current || loadedCustomers[0]?.id || "");
+      } catch (cause) {
+        if (active) setOptionsError(cause instanceof Error ? cause.message : "تعذر تحميل خيارات الحجز.");
+      } finally {
+        if (active) setLoadingOptions(false);
+      }
+    }
+    void loadOptions();
+    return () => { active = false; };
+  }, []);
+
+  const availableVehicles = vehicles.filter((vehicle) => vehicle.customer_id === customerId);
+
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setSaving(true);
+    setError("");
+    setMessage("");
+    try {
+      const scheduled = new Date(scheduledAt);
+      if (!Number.isFinite(scheduled.getTime())) throw new Error("أدخل موعدًا صالحًا.");
+      const response = await fetch("/api/v1/bookings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          customerId,
+          ...(vehicleId ? { vehicleId } : {}),
+          requestedService,
+          scheduledAt: scheduled.toISOString(),
+          notes,
+        }),
+      });
+      const payload = await response.json() as CreateResponse;
+      if (!response.ok || !payload.ok || !payload.data) {
+        throw new Error(payload.error?.message || "تعذر إنشاء الحجز.");
+      }
+      setRequestedService("");
+      setScheduledAt("");
+      setNotes("");
+      setVehicleId("");
+      setMessage("تم إنشاء الحجز بنجاح.");
+      await onCreated();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "تعذر إنشاء الحجز.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <section className="booking-panel booking-create-panel">
+      <div className="panel-heading">
+        <div><h2>إنشاء حجز جديد</h2><p>اختر عميلًا ومركبة مسجلين داخل الورشة الحالية.</p></div>
+      </div>
+      {optionsError && <p className="booking-create-feedback booking-create-error" role="alert">{optionsError}</p>}
+      {!loadingOptions && !optionsError && customers.length === 0 && (
+        <p className="booking-create-feedback">لا يوجد عملاء بعد. <Link href="/customers">سجّل أول عميل ←</Link></p>
+      )}
+      <form className="booking-create-form" onSubmit={submit}>
+        <label className="booking-create-field booking-create-span-2">
+          <span>العميل *</span>
+          <select required value={customerId} disabled={loadingOptions || saving || customers.length === 0}
+            onChange={(event) => { setCustomerId(event.target.value); setVehicleId(""); }}>
+            <option value="" disabled>اختر العميل</option>
+            {customers.map((customer) => <option key={customer.id} value={customer.id}>{customer.full_name} — {customer.phone}</option>)}
+          </select>
+        </label>
+        <label className="booking-create-field booking-create-span-2">
+          <span>المركبة (اختياري)</span>
+          <select value={vehicleId} disabled={loadingOptions || saving || !customerId}
+            onChange={(event) => setVehicleId(event.target.value)}>
+            <option value="">بدون تحديد مركبة</option>
+            {availableVehicles.map((vehicle) => <option key={vehicle.id} value={vehicle.id}>
+              {vehicle.make} {vehicle.model}{vehicle.model_year ? ` ${vehicle.model_year}` : ""} · {vehicle.plate_number}
+            </option>)}
+          </select>
+        </label>
+        <label className="booking-create-field booking-create-span-2">
+          <span>الخدمة المطلوبة *</span>
+          <input required minLength={2} maxLength={160} value={requestedService}
+            onChange={(event) => setRequestedService(event.target.value)} placeholder="مثال: فحص كمبيوتر وتشخيص عطل" />
+        </label>
+        <label className="booking-create-field booking-create-span-2">
+          <span>موعد الحجز *</span>
+          <input required type="datetime-local" value={scheduledAt} onChange={(event) => setScheduledAt(event.target.value)} />
+        </label>
+        <label className="booking-create-field booking-create-full">
+          <span>ملاحظات (اختياري)</span>
+          <textarea rows={2} maxLength={2000} value={notes} onChange={(event) => setNotes(event.target.value)} placeholder="وصف أولي للعَرَض أو طلب العميل" />
+        </label>
+        <div className="booking-create-actions">
+          <button className="primary-button" type="submit" disabled={saving || loadingOptions || !customers.length}>
+            {saving ? "جارٍ إنشاء الحجز…" : "حفظ الحجز"}
+          </button>
+          {message && <span className="booking-create-success" role="status">{message}</span>}
+          {error && <span className="booking-create-error" role="alert">{error}</span>}
+        </div>
+      </form>
+    </section>
+  );
+}
 
 export default function AdminBookingsPage() {
   const [bookings, setBookings] = useState<Booking[]>([]);
@@ -161,7 +305,7 @@ export default function AdminBookingsPage() {
           <div className="booking-title-row"><div><p className="admin-eyebrow">إدارة المواعيد</p><h1>الحجوزات</h1><p className="admin-subtitle">تابع طلبات العملاء، أكّد المواعيد، وجهّز استقبال السيارات.</p></div><div className="booking-toolbar"><button className="secondary-button" onClick={() => void loadBookings()} type="button" disabled={loading}>تحديث القائمة</button><button className="primary-button" onClick={() => window.print()} type="button">طباعة القائمة</button></div></div>
 
           {loadError && <div className="preview-notice" role="alert"><span className="notice-symbol">ⓘ</span><div><strong>تعذر تحميل الحجوزات</strong><p>{loadError} تأكد من تسجيل الدخول وتطبيق ترحيل قاعدة البيانات.</p><button className="secondary-button" onClick={() => void loadBookings()} type="button">إعادة المحاولة</button></div></div>}
-          {!loadError && <div className="preview-notice"><span className="notice-symbol">ⓘ</span><div><strong>بيانات فعلية عبر API</strong><p>تُعرض الحجوزات المحفوظة في قاعدة البيانات فقط. إنشاء الحجوزات وإرسال واتساب غير متاحين من هذه الشاشة حتى اكتمال واجهة العميل والتكاملات.</p></div></div>}
+          {!loadError && <div className="preview-notice"><span className="notice-symbol">ⓘ</span><div><strong>بيانات فعلية عبر API</strong><p>أنشئ الحجز من النموذج أدناه. تجهيز رسالة واتساب يفتح مسودة فقط، ولا يرسل رسالة تلقائيًا.</p></div></div>}
 
           <section className="booking-stats" aria-label="ملخص الحجوزات">
             <article className="stat-card"><span className="stat-label">حجوزات اليوم</span><span className="stat-value">{todayBookings.toLocaleString("ar-SA")}</span><span className="stat-foot">باستثناء الملغاة</span><span className="stat-icon yellow">▦</span></article>
@@ -169,6 +313,8 @@ export default function AdminBookingsPage() {
             <article className="stat-card"><span className="stat-label">داخل الورشة</span><span className="stat-value">{activeCount.toLocaleString("ar-SA")}</span><span className="stat-foot">قيد الخدمة حاليًا</span><span className="stat-icon blue">⚙</span></article>
             <article className="stat-card"><span className="stat-label">مكتملة</span><span className="stat-value">{completedCount.toLocaleString("ar-SA")}</span><span className="stat-foot">من قاعدة البيانات</span><span className="stat-icon green">✓</span></article>
           </section>
+
+          <CreateBookingPanel onCreated={loadBookings} />
 
           <section className="booking-panel">
             <div className="panel-heading"><div><h2>قائمة الحجوزات</h2><p>ابحث بالعميل أو رقم الحجز أو السيارة.</p></div><span className="results-count">{filteredBookings.length.toLocaleString("ar-SA")} نتائج</span></div>
