@@ -1,39 +1,45 @@
-# جرد الأصول السابقة — Workshop Growth OS
+# Asset audit — updated 2026-10-10
 
-تاريخ الفحص: 2026-10-10. هذا جرد أولي مبني على ملفات GitHub المقروءة، وليس تدقيقًا محليًا شاملًا لكل سطر أو اختبارًا حيًا.
+This is a GitHub source review, not a full local checkout or a live security test.
 
-## المستودع الحالي
-- `autoaifix-max/workshop-growth-os`: كان يحتوي على README قصير فقط قبل تأسيس الوثائق. لا توجد فيه نواة تطبيق يمكن الحفاظ عليها حتى الآن.
+## Workshop Growth OS
+The designated platform repository. It contains product scope, modular boundaries, tenant-isolation rules, a draft OpenAPI v1 contract, development gates, and the preliminary Digital DiagPro reuse review. No application runtime has been scaffolded yet.
 
-## الأصول السابقة التي ظهرت
+## Digital DiagPro
+Repository: https://github.com/autoaifix-max/digital-diagpro
 
-### 1. Digital DiagPro
-الرابط: https://github.com/autoaifix-max/digital-diagpro
-- Next.js App Router + TypeScript + Tailwind + Supabase.
-- تدفق تشغيلي واسع: العملاء، السيارات، الخدمات، الحجوزات، أوامر العمل، تقارير التشخيص وDTC، الموافقات، فحص الجودة، المستندات، بوابة العميل وسجل التدقيق.
-- يحتوي على 10 migrations ظاهرة في الشجرة، وRLS، وسياسات تخزين خاصة، واختبارات domain.
-- تقرير المشروع يسجل نتائج ناجحة لـ lint وtypecheck و25 اختبارًا وbuild في 2026-07-14. هذه نتائج موثقة داخل المستودع وليست إعادة تشغيل مستقلة في هذا المشروع.
-- القيد الحاسم: README يصرح بأن النسخة Pilot لورشة واحدة، وأن SaaS متعدد الورش والاشتراكات والفوترة ومخزون القطع وWhatsApp Business API والتطبيقات الأصلية خارج نطاقها.
-- القرار المبدئي: **أقوى مرشح لإعادة استخدام تدفقات التشغيل ومخطط المجال**، لكنه ليس جاهزًا للنقل المباشر كمنصة SaaS. يجب تدقيق جميع migrations وسياسات RLS وواجهات API والتبعيات قبل اعتماد أي جزء.
+- Next.js App Router, TypeScript, Tailwind, Supabase SSR, Zod, 10 migrations, API handlers and domain tests.
+- Best reference for workshop operations: customers, vehicles, bookings, work orders, diagnostics, approvals, quality, documents and audit logs.
+- Customer and vehicle API handlers validate inputs and derive the workshop ID from the authenticated staff profile.
+- Security caveat: it remains a pilot with default-workshop assumptions, including public booking against the active default workshop and a fixed pilot admin bootstrap. RLS, grants and every SECURITY DEFINER function must be reviewed and tested before adapting.
+- The committed test report records successful checks on 2026-07-14; those checks have not been rerun during this review.
+- Detailed findings: [digital-diagpro-reuse-audit.md](digital-diagpro-reuse-audit.md).
 
-### 2. DiagPro Knowledge
-الرابط: https://github.com/autoaifix-max/diagpro-knowledge
-- قاعدة معرفة تشخيصية عربية RTL، مبنية على Next.js وSupabase/pgvector وClaude API.
-- تتضمن ingest لمصادر وفيديوهات، تقسيم المحتوى إلى chunks، embeddings، واسترجاعًا دلاليًا مع مصادر للإجابة.
-- القرار المبدئي: مرشح لوحدة معرفة فنية مستقلة عبر واجهة خدمة، وليس لدمج واجهته أو قاعدة بياناته كاملة في نظام الورش.
+## DiagPro Knowledge
+Repository: https://github.com/autoaifix-max/diagpro-knowledge
 
-### 3. DiagPro Manager V1
-الرابط: https://github.com/ahmedzohaidz/diagpro-manager-v1
-- الملفات المقروءة تتضمن تعليمات المشروع فقط؛ تصف نطاقًا مبكرًا لتدفق الحجز بتقنيات Next.js وSupabase.
-- شجرة GitHub التي أمكن قراءتها لا تعرض ملفات تطبيق فعلية سوى `.gitignore` و`AGENTS.md` و`CLAUDE.md`. حجم المستودع المعلن كبير بصورة لا تفسرها هذه الشجرة؛ يلزم فحص محلي قبل استنتاج سبب ذلك.
-- القرار المبدئي: لا يُعتمد كأساس تنفيذي قبل تفسير حالة المستودع محليًا.
+- A 57-entry source tree was visible during review; it contains a Next.js RTL interface, Supabase/pgvector retrieval, embedding generation, Claude-based answers and an ingestion script.
+- Best future reference for the diagnostic knowledge module: retrieval, citations and source ingestion.
+- Important adaptation requirement: the current server helper creates a Supabase client with the service-role key, and the public question endpoint uses that client for retrieval and query logging. Do not copy this access model into tenant-facing workflows without designing least-privilege access, input limits, rate limiting, abuse controls, and appropriate logging/retention.
+- Admin authentication is described as a simple shared password in the project README/environment template. Replace it with the platform's authenticated staff/role model before connecting it to workshop data.
+- Decision: keep it behind a future internal service/API boundary; do not merge its database or UI into the core now.
 
-### 4. ملاحظة التوافق
-يجب فحص أي مشروع محلي آخر باسم Workshop Growth أو DiagPro أو Workshop قبل اتخاذ قرار نهائي. لا تعني هذه الجولة أن كل نسخ الجهاز المحلي أو الفروع والنسخ الاحتياطية قد فُحصت.
+## DiagPro Manager V1
+Repository: https://github.com/ahmedzohaidz/diagpro-manager-v1
 
-## قرار معماري أولي
-1. الاحتفاظ بـ Workshop Growth OS كمستودع المنصة الموحّد.
-2. اعتبار Digital DiagPro مصدرًا مرجعيًا لتدفقات الورشة والاختبارات، لا نسخًا جاهزًا متعدد المستأجرين.
-3. عزل المعرفة التشخيصية خلف عقد API/خدمة واضحة.
-4. عدم نسخ أسرار أو بيانات إنتاج أو ملفات بيئة أو بيانات عملاء إلى المستودع الجديد.
-5. لا اعتماد نهائي لأي كود قبل مراجعة الأمان والعزل والاختبارات وإعادة تشغيل بوابات التحقق.
+- The readable Git tree on the default branch contains only `.gitignore`, `AGENTS.md`, and `CLAUDE.md`.
+- Those instructions describe an early booking-first concept but explicitly say application scaffolding has not started.
+- Decision: useful as a product-scope reference only; not a codebase to adopt until the discrepancy between reported repository size and visible Git tree is explained by a local inspection.
+
+## Consolidated reuse decision
+
+| Asset | Decision |
+|---|---|
+| Digital DiagPro operational domain, validators and state-machine patterns | Adapt selectively after security review |
+| Digital DiagPro RLS and SQL migrations | Reference and rewrite/adapt only with multi-tenant integration tests |
+| DiagPro Knowledge retrieval, ingestion and source citation | Future isolated module; redesign authorization first |
+| DiagPro Manager V1 | Product requirements only; no application code observed in Git tree |
+| Workshop Growth OS | Single destination for the new SaaS implementation |
+
+## Required gate
+Before copying operational code, review migrations 001–010 in full; enumerate all privileged functions, policies and grants; test access with two workshops and distinct roles; run a clean install, lint, typecheck, tests, production build, package verification and dependency audit. Do not copy environment files, credentials or production records.
