@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 type BookingStatus = "pending" | "confirmed" | "in_progress" | "completed" | "cancelled";
@@ -109,10 +110,10 @@ export default function AdminBookingsPage() {
   return (
     <main className="admin-shell">
       <aside className="admin-sidebar">
-        <a className="admin-brand" href="/" aria-label="Workshop Growth OS الصفحة الرئيسية"><span className="brand-mark">WG</span><span><strong>Workshop Growth</strong><small>إدارة الورشة</small></span></a>
+        <Link className="admin-brand" href="/" aria-label="Workshop Growth OS الصفحة الرئيسية"><span className="brand-mark">WG</span><span><strong>Workshop Growth</strong><small>إدارة الورشة</small></span></a>
         <p className="sidebar-caption">مساحة العمل</p>
         <nav className="admin-nav" aria-label="التنقل الرئيسي">
-          <a href="/" className="nav-link"><span className="nav-icon">⌂</span>نظرة عامة</a>
+          <Link href="/" className="nav-link"><span className="nav-icon">⌂</span>نظرة عامة</Link>
           <a href="/admin/bookings" className="nav-link nav-link-active"><span className="nav-icon">▦</span>الحجوزات <span className="nav-count">{bookings.length}</span></a>
           <a href="/customers" className="nav-link" aria-disabled="true"><span className="nav-icon">♙</span>العملاء</a>
           <a href="/vehicles" className="nav-link" aria-disabled="true"><span className="nav-icon">▱</span>السيارات</a>
