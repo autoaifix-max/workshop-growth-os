@@ -62,7 +62,7 @@ function setup(workshopId = tenantContext.workshopId) {
 afterEach(() => vi.clearAllMocks());
 
 describe("workshop growth metrics API", () => {
-  it("stops before querying data when tenant access is denied", async () => {
+  it("stops before querying data when tenant access is denied and disables caching", async () => {
     const client = { from: vi.fn() };
     mocks.getSupabaseServerClient.mockResolvedValue(client);
     const { NextResponse } = await import("next/server");
@@ -73,7 +73,16 @@ describe("workshop growth metrics API", () => {
 
     const response = await GET();
     expect(response.status).toBe(401);
+    expect(response.headers.get("Cache-Control")).toBe("private, no-store");
     expect(client.from).not.toHaveBeenCalled();
+  });
+
+  it("returns non-cacheable server errors when Supabase initialization fails", async () => {
+    mocks.getSupabaseServerClient.mockRejectedValue(new Error("configuration unavailable"));
+
+    const response = await GET();
+    expect(response.status).toBe(500);
+    expect(response.headers.get("Cache-Control")).toBe("private, no-store");
   });
 
   it("scopes every metric query to the active workshop and reports transparent counts", async () => {
@@ -82,6 +91,7 @@ describe("workshop growth metrics API", () => {
     const body = await response.json();
 
     expect(response.status).toBe(200);
+    expect(response.headers.get("Cache-Control")).toBe("private, no-store");
     expect(body.ok).toBe(true);
     expect(body.data.bookings).toBe(10);
     expect(body.data.workOrders).toBe(4);
