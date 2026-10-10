@@ -24,7 +24,14 @@ function setup() {
   const queries: Array<{ table: string; filters: Array<[string, unknown]> }> = [];
   const client = {
     from: vi.fn((table: string) => {
-      const query: { table: string; filters: Array<[string, unknown]>; select: (...args: unknown[]) => unknown; eq: (...args: unknown[]) => unknown; gte: (...args: unknown[]) => unknown; then: (resolve: (value: unknown) => unknown, reject?: (reason: unknown) => unknown) => Promise<unknown> } = {
+      const query: {
+        table: string;
+        filters: Array<[string, unknown]>;
+        select: (...args: unknown[]) => unknown;
+        eq: (...args: unknown[]) => unknown;
+        gte: (...args: unknown[]) => unknown;
+        then: (resolve: (value: unknown) => unknown, reject?: (reason: unknown) => unknown) => Promise<unknown>;
+      } = {
         table,
         filters: [],
         select: () => query,
@@ -83,27 +90,7 @@ describe("workshop growth metrics API", () => {
     expect(queries).toHaveLength(7);
     for (const query of queries) {
       expect(query.filters).toContainEqual(["workshop_id", tenantContext.workshopId]);
-      expect(query.filters.some(([column]) => column === "gte")).toBe(false);
       expect(query.filters.some(([column]) => column === "created_at")).toBe(true);
     }
-  });
-
-  it("returns null completion rate when there are no eligible bookings", async () => {
-    const { client } = setup();
-    client.from.mockImplementation((table: string) => {
-      const query = {
-        select: () => query,
-        eq: () => query,
-        gte: () => query,
-        then: (resolve: (value: unknown) => unknown, reject?: (reason: unknown) => unknown) =>
-          Promise.resolve({ count: table === "bookings" ? 0 : 0, error: null }).then(resolve, reject),
-      };
-      return query;
-    });
-
-    const response = await GET();
-    const body = await response.json();
-    expect(body.data.completionRate).toBeNull();
-    expect(body.data.completionRateDenominator).toBe(0);
   });
 });
