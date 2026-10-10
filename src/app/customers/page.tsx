@@ -134,8 +134,8 @@ export default function CustomersPage() {
             {!loadError && items.length > 0 && <div className="booking-table-wrap"><table className="booking-table"><thead><tr><th>الاسم</th><th>الهاتف</th><th>تاريخ التسجيل</th></tr></thead><tbody>{items.map((item) => <tr key={item.id}><td><strong>{item.full_name}</strong>{item.notes && <small className="table-subline">{item.notes}</small>}</td><td dir="ltr">{item.phone}</td><td>{dateFormat(item.created_at)}</td></tr>)}</tbody></table></div>}
             <div className="table-footer"><span>المصدر: API الورشة</span><Link href="/vehicles" className="wg-text-link">إضافة مركبة ←</Link></div>
           </article>
-  </main>
-      </section>
+          </section>
+        </main>
       </section>
     </main>
   );
