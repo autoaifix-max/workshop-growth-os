@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { getAllowedWorkOrderStatusTransitions } from "@/lib/work-order-status";
 import { useCallback, useEffect, useState } from "react";
 
 type WorkOrderStatus = "open" | "diagnosing" | "waiting_parts" | "in_progress" | "completed" | "cancelled";
@@ -18,6 +19,7 @@ type WorkOrder = {
   vehicles?: { plate_number: string; make: string; model: string; model_year: number | null } | null;
 };
 type ApiResponse = { ok: boolean; data?: { items?: WorkOrder[] }; error?: { message?: string } | null };
+type UpdateResponse = { ok: boolean; data?: { id: string; status: WorkOrderStatus }; error?: { message?: string } | null };
 
 const statusLabels: Record<WorkOrderStatus, string> = {
   open: "مفتوح", diagnosing: "قيد التشخيص", waiting_parts: "بانتظار قطع الغيار",
@@ -30,6 +32,8 @@ export default function WorkOrdersPage() {
   const [items, setItems] = useState<WorkOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [feedback, setFeedback] = useState("");
+  const [updatingId, setUpdatingId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -51,6 +55,28 @@ export default function WorkOrdersPage() {
   }, []);
 
   useEffect(() => { void load(); }, [load]);
+  async function updateStatus(item: WorkOrder, status: WorkOrderStatus) {
+    setUpdatingId(item.id);
+    setFeedback("");
+    try {
+      const response = await fetch("/api/v1/work-orders", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: item.id, status }),
+      });
+      const payload = await response.json() as UpdateResponse;
+      if (!response.ok || !payload.ok) {
+        throw new Error(payload.error?.message || "تعذر تحديث حالة أمر العمل.");
+      }
+      setFeedback("تم تحديث حالة أمر العمل.");
+      await load();
+    } catch (cause) {
+      setFeedback(cause instanceof Error ? cause.message : "تعذر تحديث حالة أمر العمل.");
+    } finally {
+      setUpdatingId(null);
+    }
+  }
+
 
   return (
     <main className="admin-shell">
@@ -79,14 +105,15 @@ export default function WorkOrdersPage() {
           <section className="admin-page-intro">
             <p className="admin-eyebrow">متابعة التنفيذ</p>
             <h1>أوامر العمل</h1>
-            <p>تظهر هنا أوامر العمل التي أنشئت من الحجوزات. تغييرات الحالة التفصيلية ليست متاحة بعد من هذه الصفحة.</p>
+            <p>تابع تقدم التشخيص والإصلاح. تغيير الحالة يخضع لقواعد سير العمل والصلاحيات، وعند إكمال أمر العمل أو إلغائه تُزامَن حالة الحجز المرتبط تلقائيًا.</p>
           </section>
           <section className="booking-panel">
             <div className="panel-heading"><div><h2>قائمة أوامر العمل</h2><p>{items.length.toLocaleString("ar-SA")} أمر عمل محمّل</p></div><button className="secondary-button" type="button" onClick={() => void load()} disabled={loading}>تحديث</button></div>
+            {feedback && <p className="work-order-feedback" role="status">{feedback}</p>}
             {error && <div className="empty-state"><strong>تعذر تحميل أوامر العمل</strong><p>{error}</p><button className="secondary-button" type="button" onClick={() => void load()}>إعادة المحاولة</button></div>}
             {!error && loading && <div className="empty-state"><strong>جارٍ تحميل أوامر العمل…</strong></div>}
             {!error && !loading && items.length === 0 && <div className="empty-state"><strong>لا توجد أوامر عمل مسجلة</strong><p>ابدأ من صفحة الحجوزات ثم اختر «تحويل إلى أمر عمل» لحجز قابل للتحويل.</p><Link className="primary-button" href="/admin/bookings">فتح الحجوزات</Link></div>}
-            {!error && !loading && items.length > 0 && <div className="booking-table-wrap"><table className="booking-table"><thead><tr><th>رقم الأمر</th><th>العميل</th><th>المركبة</th><th>الخدمة</th><th>الحالة</th><th>تاريخ الإنشاء</th></tr></thead><tbody>{items.map((item) => <tr key={item.id}><td><strong>{item.id.slice(0, 8)}</strong><small className="table-subline">حجز {item.booking_id.slice(0, 8)}</small></td><td><strong>{item.customers?.full_name ?? "عميل"}</strong><small className="table-subline" dir="ltr">{item.customers?.phone ?? "—"}</small></td><td>{item.vehicles ? `${item.vehicles.make} ${item.vehicles.model}` : "لم تحدد مركبة"}<small className="table-subline">{item.vehicles?.plate_number ?? "—"}</small></td><td>{item.requested_service}</td><td><span className={"status-badge status-" + item.status}><span />{statusLabels[item.status]}</span></td><td>{dateFormat(item.created_at)}</td></tr>)}</tbody></table></div>}
+            {!error && !loading && items.length > 0 && <div className="booking-table-wrap"><table className="booking-table"><thead><tr><th>رقم الأمر</th><th>العميل</th><th>المركبة</th><th>الخدمة</th><th>الحالة</th><th>تاريخ الإنشاء</th></tr></thead><tbody>{items.map((item) => <tr key={item.id}><td><strong>{item.id.slice(0, 8)}</strong><small className="table-subline">حجز {item.booking_id.slice(0, 8)}</small></td><td><strong>{item.customers?.full_name ?? "عميل"}</strong><small className="table-subline" dir="ltr">{item.customers?.phone ?? "—"}</small></td><td>{item.vehicles ? `${item.vehicles.make} ${item.vehicles.model}` : "لم تحدد مركبة"}<small className="table-subline">{item.vehicles?.plate_number ?? "—"}</small></td><td>{item.requested_service}</td><td><div className="work-order-status-cell"><span className={"status-badge status-" + item.status}><span />{statusLabels[item.status]}</span><select className="work-order-status-select" aria-label={`تغيير حالة أمر العمل ${item.id.slice(0, 8)}`} value={item.status} disabled={updatingId === item.id || getAllowedWorkOrderStatusTransitions(item.status).length === 0} onChange={(event) => void updateStatus(item, event.target.value as WorkOrderStatus)}>{[item.status, ...getAllowedWorkOrderStatusTransitions(item.status)].map((status) => <option key={status} value={status}>{statusLabels[status]}</option>)}</select></div></td><td>{dateFormat(item.created_at)}</td></tr>)}</tbody></table></div>}
             <div className="table-footer"><span>المصدر: API الورشة</span><Link className="wg-text-link" href="/admin/bookings">إدارة الحجوزات ←</Link></div>
           </section>
         </main>

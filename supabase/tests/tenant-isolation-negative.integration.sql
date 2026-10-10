@@ -88,6 +88,7 @@ end $tenant$;
 select set_config('request.jwt.claim.sub','11111111-1111-4111-8111-111111111111',true);
 do $tenant$
 declare affected integer;
+  booking_status text;
 begin
   -- pending -> confirmed is permitted.
   update public.bookings set status = 'confirmed'
@@ -111,18 +112,34 @@ begin
   exception when check_violation then null;
   end;
 
-  -- The work-order conversion path can move a pending booking to in_progress once its work order exists.
+  -- A booking may enter in_progress because its work order exists.
   update public.bookings set status = 'in_progress'
   where id = 'aaaaaaaa-0003-4000-8000-000000000001';
   get diagnostics affected = row_count;
   if affected <> 1 then raise exception 'Work-order-backed transition to in_progress failed'; end if;
 
-  update public.bookings set status = 'completed'
-  where id = 'aaaaaaaa-0003-4000-8000-000000000001';
-  get diagnostics affected = row_count;
-  if affected <> 1 then raise exception 'Valid in_progress -> completed transition failed'; end if;
+  -- The database must reject skipping directly from open to completed.
+  begin
+    update public.work_orders set status = 'completed'
+    where id = 'aaaaaaaa-0004-4000-8000-000000000001';
+    raise exception 'Database allowed open -> completed work-order transition';
+  exception when check_violation then null;
+  end;
 
-  -- Completed bookings are terminal.
+  update public.work_orders set status = 'diagnosing'
+  where id = 'aaaaaaaa-0004-4000-8000-000000000001';
+  update public.work_orders set status = 'in_progress'
+  where id = 'aaaaaaaa-0004-4000-8000-000000000001';
+  update public.work_orders set status = 'completed'
+  where id = 'aaaaaaaa-0004-4000-8000-000000000001';
+
+  select status into booking_status from public.bookings
+  where id = 'aaaaaaaa-0003-4000-8000-000000000001';
+  if booking_status <> 'completed' then
+    raise exception 'Completing a work order did not complete its linked booking';
+  end if;
+
+  -- Completed bookings are terminal, and the work-order status must agree.
   begin
     update public.bookings set status = 'cancelled'
     where id = 'aaaaaaaa-0003-4000-8000-000000000001';
@@ -195,6 +212,41 @@ begin
           'aaaaaaaa-0001-4000-8000-000000000001','aaaaaaaa-0002-4000-8000-000000000001',
           'Receptionist booking','55555555-5555-4555-8555-555555555555');
 end $tenant$;
+
+
+-- Work-order completion synchronizes the booking atomically, even for a receptionist.
+-- The authenticated role remains receptionist at this point.
+select set_config('request.jwt.claim.sub','55555555-5555-4555-8555-555555555555',true);
+update public.bookings set status = 'in_progress'
+where id = 'aaaaaaaa-0006-4000-8000-000000000001';
+
+do $tenant$
+begin
+  begin
+    update public.work_orders set status = 'completed'
+    where booking_id = 'aaaaaaaa-0006-4000-8000-000000000001';
+    raise exception 'Database allowed open -> completed work-order transition';
+  exception when check_violation then null;
+  end;
+end $tenant$;
+
+update public.work_orders set status = 'diagnosing'
+where booking_id = 'aaaaaaaa-0006-4000-8000-000000000001';
+update public.work_orders set status = 'in_progress'
+where booking_id = 'aaaaaaaa-0006-4000-8000-000000000001';
+update public.work_orders set status = 'completed'
+where booking_id = 'aaaaaaaa-0006-4000-8000-000000000001';
+
+do $tenant$
+declare booking_status text;
+begin
+  select status into booking_status from public.bookings
+  where id = 'aaaaaaaa-0006-4000-8000-000000000001';
+  if booking_status <> 'completed' then
+    raise exception 'Receptionist work-order completion did not synchronize booking status';
+  end if;
+end $tenant$;
+
 
 reset role;
 rollback;
