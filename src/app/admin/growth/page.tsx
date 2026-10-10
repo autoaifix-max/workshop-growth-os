@@ -83,10 +83,10 @@ export default function WorkshopGrowthPage() {
           </div></div>}
 
           <section className="booking-stats" aria-label="مؤشرات نمو الورشة">
-            <article className="stat-card"><span className="stat-label">الحجوزات المسجلة</span><span className="stat-value">{loading ? "…" : number(metrics?.bookings ?? 0)}</span><span className="stat-foot">آخر 30 يومًا</span><span className="stat-icon yellow">▦</span></article>
-            <article className="stat-card"><span className="stat-label">بانتظار التأكيد</span><span className="stat-value">{loading ? "…" : number(metrics?.pending ?? 0)}</span><span className="stat-foot">حجوزات تحتاج متابعة</span><span className="stat-icon orange">◷</span></article>
-            <article className="stat-card"><span className="stat-label">أوامر العمل الجديدة</span><span className="stat-value">{loading ? "…" : number(metrics?.workOrders ?? 0)}</span><span className="stat-foot">أُنشئت خلال الفترة</span><span className="stat-icon blue">⚙</span></article>
-            <article className="stat-card"><span className="stat-label">نسبة إنجاز الحجوزات</span><span className="stat-value">{loading ? "…" : percent(metrics?.completionRate ?? null)}</span><span className="stat-foot">من {number(metrics?.completionRateDenominator ?? 0)} حجز غير ملغى</span><span className="stat-icon green">✓</span></article>
+            <article className="stat-card"><span className="stat-label">الحجوزات المسجلة</span><span className="stat-value">{loading ? "…" : error ? "—" : number(metrics?.bookings ?? 0)}</span><span className="stat-foot">آخر 30 يومًا</span><span className="stat-icon yellow">▦</span></article>
+            <article className="stat-card"><span className="stat-label">بانتظار التأكيد</span><span className="stat-value">{loading ? "…" : error ? "—" : number(metrics?.pending ?? 0)}</span><span className="stat-foot">حجوزات تحتاج متابعة</span><span className="stat-icon orange">◷</span></article>
+            <article className="stat-card"><span className="stat-label">أوامر العمل الجديدة</span><span className="stat-value">{loading ? "…" : error ? "—" : number(metrics?.workOrders ?? 0)}</span><span className="stat-foot">أُنشئت خلال الفترة</span><span className="stat-icon blue">⚙</span></article>
+            <article className="stat-card"><span className="stat-label">نسبة إنجاز الحجوزات</span><span className="stat-value">{loading ? "…" : error ? "—" : percent(metrics?.completionRate ?? null)}</span><span className="stat-foot">من {error ? "—" : number(metrics?.completionRateDenominator ?? 0)} حجز غير ملغى</span><span className="stat-icon green">✓</span></article>
           </section>
 
           <section className="booking-panel">
