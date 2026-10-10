@@ -27,7 +27,7 @@ insert into public.work_orders(id,workshop_id,booking_id,customer_id,vehicle_id,
 insert into public.bookings(id,workshop_id,customer_id,vehicle_id,requested_service,scheduled_at,created_by) values ('bbbbbbbb-0005-4000-8000-000000000001','bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb','bbbbbbbb-0001-4000-8000-000000000001','bbbbbbbb-0002-4000-8000-000000000001','Diagnostic B2',now(),'22222222-2222-4222-8222-222222222222');
 set local role authenticated;
 select set_config('request.jwt.claim.sub','11111111-1111-4111-8111-111111111111',true);
-do $$
+do $tenant$
 declare n integer;
 begin
  select count(*) into n from public.customers; if n <> 1 then raise exception 'customer read isolation failed'; end if;
