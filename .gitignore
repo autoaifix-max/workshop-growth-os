@@ -1,0 +1,41 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.*
+.npm/
+
+# Next.js / build outputs
+.next/
+out/
+build/
+dist/
+coverage/
+*.tsbuildinfo
+next-env.d.ts
+
+# Local environment and secrets
+.env
+.env.*
+!.env.example
+!.env.template
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+*.log
+
+# Tooling and local state
+.vercel/
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Test artifacts
+playwright-report/
+test-results/
