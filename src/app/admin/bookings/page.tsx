@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { redirectIfUnauthorized } from "@/lib/auth/redirect-to-login";
 import { getAllowedBookingStatusTransitions } from "@/lib/booking-status";
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 
@@ -71,6 +72,7 @@ function CreateBookingPanel({ onCreated }: { onCreated: () => Promise<void> }) {
           fetch("/api/v1/customers?limit=100", { cache: "no-store" }),
           fetch("/api/v1/vehicles", { cache: "no-store" }),
         ]);
+        if (redirectIfUnauthorized(customersResponse, vehiclesResponse)) return;
         const customersPayload = await customersResponse.json() as OptionsResponse<CustomerOption>;
         const vehiclesPayload = await vehiclesResponse.json() as OptionsResponse<VehicleOption>;
         if (!customersResponse.ok || !customersPayload.ok || !customersPayload.data ||
@@ -116,6 +118,7 @@ function CreateBookingPanel({ onCreated }: { onCreated: () => Promise<void> }) {
           notes,
         }),
       });
+      if (redirectIfUnauthorized(response)) return;
       const payload = await response.json() as CreateResponse;
       if (!response.ok || !payload.ok || !payload.data) {
         throw new Error(payload.error?.message || "تعذر إنشاء الحجز.");
@@ -201,6 +204,7 @@ export default function AdminBookingsPage() {
     setLoadError("");
     try {
       const response = await fetch("/api/v1/bookings?limit=100", { cache: "no-store" });
+      if (redirectIfUnauthorized(response)) return;
       const payload = await response.json() as ApiResponse;
       if (!response.ok || !payload.ok || !payload.data || !("items" in payload.data)) {
         throw new Error(payload.error?.message || (response.status === 401 ? "يلزم تسجيل الدخول لعرض الحجوزات." : "تعذر تحميل الحجوزات."));
@@ -241,6 +245,7 @@ export default function AdminBookingsPage() {
         method: "PATCH", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id: booking.id, status }),
       });
+      if (redirectIfUnauthorized(response)) return;
       const payload = await response.json() as ApiResponse;
       if (!response.ok || !payload.ok) throw new Error(payload.error?.message || "تعذر تحديث حالة الحجز.");
       setActionMessage("تم تحديث حالة الحجز.");
@@ -258,6 +263,7 @@ export default function AdminBookingsPage() {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ bookingId: booking.id }),
       });
+      if (redirectIfUnauthorized(response)) return;
       const payload = await response.json() as ApiResponse;
       if (!response.ok || !payload.ok) throw new Error(payload.error?.message || "تعذر تحويل الحجز إلى أمر عمل.");
       setActionMessage("تم إنشاء/استرجاع أمر العمل المرتبط بالحجز.");
