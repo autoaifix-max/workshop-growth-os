@@ -9,6 +9,7 @@ Arabic-first, multi-workshop SaaS for automotive repair operations.
 - Bookings list/create/status-update endpoints at `/api/v1/bookings`.
 - Work-order listing and booking conversion at `/api/v1/work-orders`.
 - Work-order schema and tenant RLS: `supabase/migrations/0003_work_orders.sql`.
+- Active-workshop access policies: `supabase/migrations/0004_enforce_active_workshop_status.sql`.
 - Arabic RTL bookings admin page at `/admin/bookings`, reading and updating bookings through the API.
 - Supabase Auth session and membership-derived workshop context.
 - Core schema: `supabase/migrations/0001_core_customers_vehicles.sql`.
@@ -30,15 +31,16 @@ Allowed statuses: `pending`, `confirmed`, `in_progress`, `completed`, `cancelled
 1. Use Node.js 22 and npm.
 2. Copy `.env.example` to `.env.local`.
 3. Set the Supabase project URL and anon key.
-4. Apply `0001_core_customers_vehicles.sql`, then `0002_bookings.sql`, then `0003_work_orders.sql` to a test Supabase project.
-5. Create a workshop and membership for a test user through a controlled admin process. Public tenant bootstrap is not included.
-6. Run `npm install`, then `npm run dev`, and visit `http://localhost:3000/admin/bookings`.
+4. On a fresh test project, apply migrations in version order: `0001_core_customers_vehicles.sql`, `0002_bookings.sql`, `0003_work_orders.sql`, then `0004_enforce_active_workshop_status.sql`.
+5. On an existing project, confirm which migrations have already been applied before applying any new migration. Apply `0004_enforce_active_workshop_status.sql` only after the earlier schema migrations are present.
+6. Create a workshop and membership for a test user through a controlled admin process. Public tenant bootstrap is not included.
+7. Run `npm install`, then `npm run dev`, and visit `http://localhost:3000/admin/bookings`.
 
 ## Verification
 Run `npm run lint`, `npm run typecheck`, `npm test`, and `npm run build`. Do not treat an empty status response as a pass. Changes must remain unmerged until CI finishes successfully.
 
 ## Known limitations
-- The migrations have not been applied to a live Supabase project in this change; runtime database connectivity remains unverified.
+- The active-workshop policy migration must be confirmed/applied on the target Supabase project; runtime database connectivity and authenticated application flows remain unverified.
 - The booking dashboard requires a signed-in user with one active workshop membership; login and tenant onboarding screens are not included here.
 - Customer-facing booking creation, WhatsApp sending, audit events, and end-to-end/two-tenant integration tests remain outstanding. Work-order conversion exists at API level but has not yet been verified against a live database.
 - Never expose Supabase service-role credentials in browser code or application routes.
