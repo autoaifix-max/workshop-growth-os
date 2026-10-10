@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { redirectIfUnauthorized } from "@/lib/auth/redirect-to-login";
 import { FormEvent, useCallback, useEffect, useState } from "react";
 
 type Customer = { id: string; full_name: string; phone: string; notes: string; created_at: string };
@@ -36,6 +37,7 @@ export default function VehiclesPage() {
         fetch("/api/v1/customers?limit=100", { cache: "no-store" }),
         fetch("/api/v1/vehicles", { cache: "no-store" }),
       ]);
+      if (redirectIfUnauthorized(customerResponse, vehicleResponse)) return;
       const customerPayload = await customerResponse.json() as ListResponse<Customer>;
       const vehiclePayload = await vehicleResponse.json() as ListResponse<Vehicle>;
       if (!customerResponse.ok || !customerPayload.ok || !customerPayload.data ||
@@ -77,6 +79,7 @@ export default function VehiclesPage() {
           ...(vin.trim() ? { vin: vin.trim() } : {}),
         }),
       });
+      if (redirectIfUnauthorized(response)) return;
       const payload = await response.json() as CreateResponse;
       if (!response.ok || !payload.ok || !payload.data) {
         throw new Error(payload.error?.message || "تعذر تسجيل المركبة.");

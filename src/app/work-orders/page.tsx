@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { redirectIfUnauthorized } from "@/lib/auth/redirect-to-login";
 import { getAllowedWorkOrderStatusTransitions } from "@/lib/work-order-status";
 import { useCallback, useEffect, useState } from "react";
 
@@ -40,6 +41,7 @@ export default function WorkOrdersPage() {
     setError("");
     try {
       const response = await fetch("/api/v1/work-orders?limit=100", { cache: "no-store" });
+      if (redirectIfUnauthorized(response)) return;
       const payload = await response.json() as ApiResponse;
       if (!response.ok || !payload.ok || !payload.data) {
         throw new Error(payload.error?.message || (response.status === 401
@@ -64,6 +66,7 @@ export default function WorkOrdersPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id: item.id, status }),
       });
+      if (redirectIfUnauthorized(response)) return;
       const payload = await response.json() as UpdateResponse;
       if (!response.ok || !payload.ok) {
         throw new Error(payload.error?.message || "تعذر تحديث حالة أمر العمل.");
