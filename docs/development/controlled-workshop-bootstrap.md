@@ -7,59 +7,39 @@ This procedure is a temporary, auditable alternative to a public tenant-bootstra
 - Confirm the Supabase project reference in the hosting configuration without printing any secret values. Stop if the target is ambiguous.
 - Use a disposable development/test project only for this phase. Do not run this procedure against production.
 - Confirm the required migrations have already been applied. Do not apply migrations as part of onboarding.
-- Create/invite the intended owner through **Supabase Authentication → Users**. Do not insert directly into `auth.users`. Copy the resulting Auth user UUID from the dashboard.
+- Create/invite the intended owner through **Supabase Authentication → Users**. Do not insert directly into `auth.users`. The bootstrap script resolves the Auth UUID from the exact email entered by the operator, avoiding manual UUID copying.
 - For invitation links, configure Supabase Auth's allowed redirect URLs to include `https://workshop-growth-os.netlify.app/auth/callback` and set this as the invite redirect. The callback exchanges the invitation code for a session, then routes the invited user to `/set-password`. Confirm the actual site URL and redirect allow-list before sending the invite.
 - Use the Supabase SQL Editor as a trusted project administrator. Never place a service-role key in browser code, app responses, or source control.
 
 ## Step 1 — Preflight (read-only)
 
-Replace the example UUID and slug with the intended values, then run this read-only query first. Confirm the owner exists and the slug is unused. Stop if the project, owner, or slug is ambiguous.
+Replace the owner email and slug with the exact values intended for provisioning. Run this query in the SQL Editor after confirming the project reference. It must return exactly one matching Auth user and `slug_already_exists = false`.
 
 ```sql
 select
   u.id as owner_user_id,
+  u.email as owner_email,
   exists (
     select 1 from public.workshops w
-    where w.slug = 'replace-with-unique-slug'
-  ) as slug_already_exists
+    where lower(w.slug) = lower('replace-with-unique-slug')
+  ) as slug_already_exists,
+  exists (
+    select 1 from public.workshop_memberships m
+    where m.user_id = u.id and m.status = 'active'
+  ) as already_has_active_membership
 from auth.users u
-where u.id = 'REPLACE_WITH_AUTH_USER_UUID'::uuid;
+where lower(u.email) = lower('REPLACE WITH OWNER EMAIL');
 ```
 
-The query must return exactly one row and `slug_already_exists` must be `false`. If it returns zero rows, do not proceed. If the slug exists, choose a new slug; do not rerun the write blindly.
+Do not proceed unless exactly one row is returned, the slug is unused, and the account has no active workshop membership. Stop if any value or target is ambiguous.
 
-## Step 2 — Explicitly reviewed transaction
+## Step 2 — Reviewed one-time write
 
-Only after the read-only preflight is correct, replace the three placeholders below with the reviewed workshop name, unused slug, and Auth user UUID. Recheck the SQL Editor's project reference immediately before running. This script commits as a single transaction; do not execute it until the values and target project have been reviewed.
+Use **only** the canonical script at `supabase/operations/bootstrap-first-workshop.sql`. Replace its three placeholders: owner email, workshop name, and unique workshop slug. Review those values, run the read-only preflight again, then confirm the SQL Editor's project reference immediately before executing the script.
 
-```sql
-begin;
+The script resolves the existing Auth user by exact email, validates the slug, refuses to proceed if the account already has an active membership or the slug is taken, and creates the workshop plus its `owner` membership in one PostgreSQL transaction. It is outside `supabase/migrations` and never runs automatically in CI. Rehearse on a disposable project first; production provisioning remains blocked until the explicit release decision.
 
-with new_workshop as (
-  insert into public.workshops (name, slug, status)
-  values ('REPLACE_WITH_WORKSHOP_NAME', 'replace-with-unique-slug', 'active')
-  returning id, name, slug
-),
-new_membership as (
-  insert into public.workshop_memberships (workshop_id, user_id, role, status)
-  select id, 'REPLACE_WITH_AUTH_USER_UUID'::uuid, 'owner', 'active'
-  from new_workshop
-  returning workshop_id, user_id, role, status
-)
-select
-  w.id as workshop_id,
-  w.name as workshop_name,
-  w.slug,
-  m.user_id as owner_user_id,
-  m.role,
-  m.status as membership_status
-from new_workshop w
-join new_membership m on m.workshop_id = w.id;
-
-commit;
-```
-
-If any statement fails, the transaction must not be considered successful. Explicitly roll back if the SQL client leaves the transaction open. After execution, independently query the workshop and membership by the chosen slug and owner UUID to confirm exactly one matching record exists. Do not rerun blindly if the outcome is unclear.
+After execution, independently query the workshop, membership, and Auth email to verify exactly one intended match. If the SQL Editor reports an error or the outcome is unclear, stop and inspect state before retrying. Never rerun blindly.
 
 ## Verification after bootstrap
 
