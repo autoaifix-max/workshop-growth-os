@@ -32,7 +32,7 @@ export async function POST(request: Request) {
     const client = await getSupabaseServerClient();
     const tenant = await requireTenantContext(client);
     if (!tenant.ok) return tenant.response;
-    if (!["owner", "admin", "receptionist", "technician"].includes(tenant.context.role))
+    if (!["owner", "admin", "receptionist"].includes(tenant.context.role))
       return fail("FORBIDDEN", "لا تملك صلاحية إنشاء أمر عمل", 403);
     let body: unknown;
     try { body = await request.json(); } catch {
