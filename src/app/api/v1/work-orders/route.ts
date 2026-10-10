@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { z } from "zod";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 import { requireTenantContext } from "@/lib/api/tenant-context";
+import { canTransitionWorkOrderStatus, WORK_ORDER_STATUSES } from "@/lib/work-order-status";
 
 const convertSchema = z.object({ bookingId: z.string().uuid() }).strict();
 const fail = (code: string, message: string, status: number) =>
@@ -96,5 +98,55 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: true, data, error: null }, { status: 201 });
   } catch {
     return fail("SERVER_ERROR", "تعذر تحويل الحجز إلى أمر عمل؛ تحقق من إعدادات قاعدة البيانات", 500);
+  }
+}
+
+const updateStatusSchema = z.object({
+  id: z.string().uuid(),
+  status: z.enum(WORK_ORDER_STATUSES),
+}).strict();
+
+export async function PATCH(request: Request) {
+  try {
+    const client = await getSupabaseServerClient();
+    const tenant = await requireTenantContext(client);
+    if (!tenant.ok) return tenant.response;
+    if (!["owner", "admin", "receptionist", "technician"].includes(tenant.context.role))
+      return fail("FORBIDDEN", "لا تملك صلاحية تحديث حالة أمر العمل", 403);
+
+    let body: unknown;
+    try { body = await request.json(); } catch {
+      return fail("INVALID_JSON", "صيغة الطلب غير صالحة", 400);
+    }
+    const parsed = updateStatusSchema.safeParse(body);
+    if (!parsed.success)
+      return fail("VALIDATION_ERROR", "رقم أمر العمل أو الحالة غير صالح", 400);
+
+    const { data: current, error: lookupError } = await client.from("work_orders")
+      .select("id,status")
+      .eq("id", parsed.data.id)
+      .eq("workshop_id", tenant.context.workshopId)
+      .maybeSingle();
+    if (lookupError) throw lookupError;
+    if (!current) return fail("WORK_ORDER_NOT_FOUND", "أمر العمل غير موجود في هذه الورشة", 404);
+
+    if (!canTransitionWorkOrderStatus(current.status, parsed.data.status)) {
+      return fail("INVALID_STATUS_TRANSITION", "لا يمكن الانتقال من حالة أمر العمل الحالية إلى الحالة المطلوبة", 409);
+    }
+
+    const { data, error } = await client.from("work_orders")
+      .update({ status: parsed.data.status, updated_at: new Date().toISOString() })
+      .eq("id", parsed.data.id)
+      .eq("workshop_id", tenant.context.workshopId)
+      .eq("status", current.status)
+      .select("id,status,updated_at").maybeSingle();
+    if (error?.code === "23514") {
+      return fail("INVALID_STATUS_TRANSITION", "رفضت قاعدة البيانات انتقال حالة أمر العمل", 409);
+    }
+    if (error) throw error;
+    if (!data) return fail("WORK_ORDER_STATUS_CONFLICT", "تغيرت الحالة بالتزامن؛ حدّث الصفحة وحاول مجددًا", 409);
+    return NextResponse.json({ ok: true, data, error: null });
+  } catch {
+    return fail("SERVER_ERROR", "تعذر تحديث حالة أمر العمل. تحقق من إعدادات قاعدة البيانات", 500);
   }
 }
