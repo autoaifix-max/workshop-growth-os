@@ -20,7 +20,8 @@ const tenantContext = {
   role: "owner" as const,
 };
 
-function setup() {
+function setup(workshopId = tenantContext.workshopId) {
+  const activeTenant = { ...tenantContext, workshopId };
   const queries: Array<{ table: string; filters: Array<[string, unknown]> }> = [];
   const client = {
     from: vi.fn((table: string) => {
@@ -54,7 +55,7 @@ function setup() {
     }),
   };
   mocks.getSupabaseServerClient.mockResolvedValue(client);
-  mocks.requireTenantContext.mockResolvedValue({ ok: true, context: tenantContext });
+  mocks.requireTenantContext.mockResolvedValue({ ok: true, context: activeTenant });
   return { client, queries };
 }
 
@@ -92,5 +93,29 @@ describe("workshop growth metrics API", () => {
       expect(query.filters).toContainEqual(["workshop_id", tenantContext.workshopId]);
       expect(query.filters.some(([column]) => column === "created_at")).toBe(true);
     }
+  });
+
+  it("isolates metrics when the active workshop changes", async () => {
+    const firstWorkshopId = tenantContext.workshopId;
+    const secondWorkshopId = "33333333-3333-4333-8333-333333333333";
+
+    const first = setup(firstWorkshopId);
+    const firstResponse = await GET();
+    expect(firstResponse.status).toBe(200);
+    expect(first.queries).toHaveLength(7);
+    expect(first.queries.every((query) =>
+      query.filters.some(([column, value]) => column === "workshop_id" && value === firstWorkshopId),
+    )).toBe(true);
+
+    const second = setup(secondWorkshopId);
+    const secondResponse = await GET();
+    expect(secondResponse.status).toBe(200);
+    expect(second.queries).toHaveLength(7);
+    expect(second.queries.every((query) =>
+      query.filters.some(([column, value]) => column === "workshop_id" && value === secondWorkshopId),
+    )).toBe(true);
+    expect(second.queries.some((query) =>
+      query.filters.some(([column, value]) => column === "workshop_id" && value === firstWorkshopId),
+    )).toBe(false);
   });
 });
