@@ -54,6 +54,53 @@ describe("bookings API tenant and request guards", () => {
     expect(db.from).not.toHaveBeenCalled();
   });
 
+  it("creates a booking only after checking the customer and optional vehicle belong to the active workshop", async () => {
+    const db = setup();
+    const customer = {
+      select: vi.fn(), eq: vi.fn(), maybeSingle: vi.fn().mockResolvedValue({ data: { id: "33333333-3333-4333-8333-333333333333" }, error: null }),
+    };
+    customer.select.mockImplementation(() => customer);
+    customer.eq.mockImplementation(() => customer);
+    const vehicle = {
+      select: vi.fn(), eq: vi.fn(), maybeSingle: vi.fn().mockResolvedValue({ data: { id: "44444444-4444-4444-8444-444444444444" }, error: null }),
+    };
+    vehicle.select.mockImplementation(() => vehicle);
+    vehicle.eq.mockImplementation(() => vehicle);
+    const inserted = { id: "55555555-5555-4555-8555-555555555555", status: "pending" };
+    const single = vi.fn().mockResolvedValue({ data: inserted, error: null });
+    const selectInserted = vi.fn(() => ({ single }));
+    const insert = vi.fn(() => ({ select: selectInserted }));
+    db.from.mockImplementation((table: string) => {
+      if (table === "customers") return customer;
+      if (table === "vehicles") return vehicle;
+      if (table === "bookings") return { insert };
+      throw new Error(`Unexpected table: ${table}`);
+    });
+
+    const response = await POST(request("POST", {
+      customerId: "33333333-3333-4333-8333-333333333333",
+      vehicleId: "44444444-4444-4444-8444-444444444444",
+      requestedService: "فحص كمبيوتر",
+      scheduledAt: "2026-10-12T07:00:00.000Z",
+      notes: "صوت عند التشغيل",
+    }));
+
+    expect(response.status).toBe(201);
+    expect(customer.eq).toHaveBeenCalledWith("workshop_id", tenantContext.workshopId);
+    expect(vehicle.eq).toHaveBeenCalledWith("workshop_id", tenantContext.workshopId);
+    expect(vehicle.eq).toHaveBeenCalledWith("customer_id", "33333333-3333-4333-8333-333333333333");
+    expect(insert).toHaveBeenCalledWith({
+      workshop_id: tenantContext.workshopId,
+      customer_id: "33333333-3333-4333-8333-333333333333",
+      vehicle_id: "44444444-4444-4444-8444-444444444444",
+      requested_service: "فحص كمبيوتر",
+      scheduled_at: "2026-10-12T07:00:00.000Z",
+      notes: "صوت عند التشغيل",
+      status: "pending",
+      created_by: tenantContext.userId,
+    });
+  });
+
   it("rejects malformed customer IDs before querying the database", async () => {
     const db = setup();
     const response = await POST(request("POST", {
