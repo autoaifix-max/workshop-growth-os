@@ -2,26 +2,25 @@ openapi: 3.1.0
 info:
   title: Workshop Growth OS API
   version: 1.0.0-draft
-  description: Draft contract only. Endpoints are not implemented until verified in code.
+  description: >-
+    Contract for implemented v1 routes only. Non-health routes require a valid
+    Supabase SSR authenticated session. The project-specific cookie name is
+    intentionally not fixed in this draft. Bookings and work orders are planned
+    but are not implemented yet.
 servers:
   - url: /api/v1
-security:
-  - sessionAuth: []
 tags:
   - name: Health
   - name: Customers
   - name: Vehicles
-  - name: Bookings
-  - name: WorkOrders
 paths:
   /health:
     get:
       tags: [Health]
-      summary: Application health check
-      security: []
+      summary: Process liveness check; does not verify database connectivity
       responses:
         "200":
-          description: Service is responding
+          description: Application process is responding
           content:
             application/json:
               schema:
@@ -29,10 +28,10 @@ paths:
   /customers:
     get:
       tags: [Customers]
-      summary: List customers in the authenticated workshop
+      summary: List customers for the authenticated active workshop
+      x-authentication: Supabase SSR session
       parameters:
         - $ref: "#/components/parameters/Limit"
-        - $ref: "#/components/parameters/Cursor"
       responses:
         "200":
           description: Customer list
@@ -40,13 +39,20 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/SuccessEnvelope"
+        "400":
+          $ref: "#/components/responses/ValidationError"
         "401":
           $ref: "#/components/responses/Unauthorized"
         "403":
           $ref: "#/components/responses/Forbidden"
+        "409":
+          description: Account has multiple active workshop memberships
+        "500":
+          $ref: "#/components/responses/ServerError"
     post:
       tags: [Customers]
-      summary: Create a customer
+      summary: Create a customer in the authenticated active workshop
+      x-authentication: Supabase SSR session
       requestBody:
         required: true
         content:
@@ -66,13 +72,16 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "403":
           $ref: "#/components/responses/Forbidden"
+        "409":
+          description: Phone already exists in this workshop
+        "500":
+          $ref: "#/components/responses/ServerError"
   /vehicles:
     get:
       tags: [Vehicles]
-      summary: List vehicles in the authenticated workshop
+      summary: List vehicles for the authenticated active workshop
+      x-authentication: Supabase SSR session
       parameters:
-        - $ref: "#/components/parameters/Limit"
-        - $ref: "#/components/parameters/Cursor"
         - name: customerId
           in: query
           schema:
@@ -89,9 +98,14 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "403":
           $ref: "#/components/responses/Forbidden"
+        "409":
+          description: Account has multiple active workshop memberships
+        "500":
+          $ref: "#/components/responses/ServerError"
     post:
       tags: [Vehicles]
-      summary: Register a vehicle for a customer in the same workshop
+      summary: Register a vehicle linked to a customer in the same workshop
+      x-authentication: Supabase SSR session
       requestBody:
         required: true
         content:
@@ -100,7 +114,7 @@ paths:
               $ref: "#/components/schemas/VehicleInput"
       responses:
         "201":
-          description: Vehicle created
+          description: Vehicle registered
           content:
             application/json:
               schema:
@@ -111,146 +125,13 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "403":
           $ref: "#/components/responses/Forbidden"
-  /bookings:
-    get:
-      tags: [Bookings]
-      summary: List bookings in the authenticated workshop
-      parameters:
-        - $ref: "#/components/parameters/Limit"
-        - $ref: "#/components/parameters/Cursor"
-        - name: status
-          in: query
-          schema:
-            type: string
-      responses:
-        "200":
-          description: Booking list
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/SuccessEnvelope"
-        "401":
-          $ref: "#/components/responses/Unauthorized"
-        "403":
-          $ref: "#/components/responses/Forbidden"
-    post:
-      tags: [Bookings]
-      summary: Create a booking
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              additionalProperties: false
-              required: [customerId, vehicleId, scheduledAt]
-              properties:
-                customerId:
-                  type: string
-                  format: uuid
-                vehicleId:
-                  type: string
-                  format: uuid
-                scheduledAt:
-                  type: string
-                  format: date-time
-                customerNote:
-                  type: string
-                  maxLength: 2000
-      responses:
-        "201":
-          description: Booking created
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/SuccessEnvelope"
-        "400":
-          $ref: "#/components/responses/ValidationError"
-        "401":
-          $ref: "#/components/responses/Unauthorized"
-        "403":
-          $ref: "#/components/responses/Forbidden"
+        "404":
+          description: Customer does not belong to this workshop or was not found
         "409":
-          description: Schedule or state conflict
-  /work-orders:
-    get:
-      tags: [WorkOrders]
-      summary: List work orders in the authenticated workshop
-      parameters:
-        - $ref: "#/components/parameters/Limit"
-        - $ref: "#/components/parameters/Cursor"
-        - name: status
-          in: query
-          schema:
-            type: string
-      responses:
-        "200":
-          description: Work-order list
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/SuccessEnvelope"
-        "401":
-          $ref: "#/components/responses/Unauthorized"
-        "403":
-          $ref: "#/components/responses/Forbidden"
-    post:
-      tags: [WorkOrders]
-      summary: Create a work order
-      parameters:
-        - name: Idempotency-Key
-          in: header
-          required: true
-          schema:
-            type: string
-            minLength: 8
-            maxLength: 200
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              additionalProperties: false
-              required: [customerId, vehicleId, description]
-              properties:
-                customerId:
-                  type: string
-                  format: uuid
-                vehicleId:
-                  type: string
-                  format: uuid
-                bookingId:
-                  type: string
-                  format: uuid
-                description:
-                  type: string
-                  minLength: 1
-                  maxLength: 5000
-                odometerKm:
-                  type: integer
-                  minimum: 0
-      responses:
-        "201":
-          description: Work order created
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/SuccessEnvelope"
-        "400":
-          $ref: "#/components/responses/ValidationError"
-        "401":
-          $ref: "#/components/responses/Unauthorized"
-        "403":
-          $ref: "#/components/responses/Forbidden"
-        "409":
-          description: Idempotency or state conflict
+          description: Plate number or VIN already exists in this workshop
+        "500":
+          $ref: "#/components/responses/ServerError"
 components:
-  securitySchemes:
-    sessionAuth:
-      type: apiKey
-      in: cookie
-      name: session
   parameters:
     Limit:
       name: limit
@@ -260,71 +141,24 @@ components:
         minimum: 1
         maximum: 100
         default: 25
-    Cursor:
-      name: cursor
-      in: query
-      schema:
-        type: string
   schemas:
     SuccessEnvelope:
       type: object
-      required: [data, meta]
+      required: [ok, data, error]
       properties:
+        ok:
+          const: true
         data: {}
-        meta:
-          type: object
-          required: [requestId]
-          properties:
-            requestId:
-              type: string
-    CustomerInput:
-      type: object
-      additionalProperties: false
-      required: [name]
-      properties:
-        name:
-          type: string
-          minLength: 2
-          maxLength: 200
-        phone:
-          type: [string, "null"]
-          maxLength: 40
-        email:
-          type: [string, "null"]
-          format: email
-        notes:
-          type: [string, "null"]
-          maxLength: 4000
-    VehicleInput:
-      type: object
-      additionalProperties: false
-      required: [customerId, make, model, modelYear]
-      properties:
-        customerId:
-          type: string
-          format: uuid
-        make:
-          type: string
-          minLength: 1
-          maxLength: 100
-        model:
-          type: string
-          minLength: 1
-          maxLength: 100
-        modelYear:
-          type: integer
-          minimum: 1950
-          maximum: 2100
-        vin:
-          type: [string, "null"]
-          maxLength: 40
-        plateNumber:
-          type: [string, "null"]
-          maxLength: 30
+        error:
+          type: "null"
     ErrorEnvelope:
       type: object
-      required: [error, meta]
+      required: [ok, data, error]
       properties:
+        ok:
+          const: false
+        data:
+          type: "null"
         error:
           type: object
           required: [code, message]
@@ -333,17 +167,54 @@ components:
               type: string
             message:
               type: string
-            fields:
-              type: object
-        meta:
-          type: object
-          required: [requestId]
-          properties:
-            requestId:
-              type: string
+    CustomerInput:
+      type: object
+      additionalProperties: false
+      required: [fullName, phone]
+      properties:
+        fullName:
+          type: string
+          minLength: 2
+          maxLength: 120
+        phone:
+          type: string
+          minLength: 8
+          maxLength: 20
+          pattern: '^[+0-9()\-\s]+$'
+        notes:
+          type: string
+          maxLength: 2000
+    VehicleInput:
+      type: object
+      additionalProperties: false
+      required: [customerId, plateNumber, make, model]
+      properties:
+        customerId:
+          type: string
+          format: uuid
+        plateNumber:
+          type: string
+          minLength: 2
+          maxLength: 20
+        make:
+          type: string
+          minLength: 1
+          maxLength: 60
+        model:
+          type: string
+          minLength: 1
+          maxLength: 60
+        modelYear:
+          type: integer
+          minimum: 1950
+          maximum: 2100
+        vin:
+          type: string
+          minLength: 5
+          maxLength: 40
   responses:
     ValidationError:
-      description: Invalid input
+      description: Invalid request body or query parameter
       content:
         application/json:
           schema:
@@ -355,7 +226,13 @@ components:
           schema:
             $ref: "#/components/schemas/ErrorEnvelope"
     Forbidden:
-      description: Insufficient permissions
+      description: Active workshop membership required
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorEnvelope"
+    ServerError:
+      description: Unexpected server-side error
       content:
         application/json:
           schema:
