@@ -1,3 +1,6 @@
+-- Required unique key for the composite vehicle/workshop foreign key below.
+create unique index if not exists vehicles_id_workshop_unique on public.vehicles(id, workshop_id);
+
 create table if not exists public.bookings (
  id uuid primary key default gen_random_uuid(),
  workshop_id uuid not null references public.workshops(id) on delete cascade,
