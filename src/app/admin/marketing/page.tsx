@@ -116,6 +116,7 @@ export default function InfluencerMarketingPage() {
           <Link href="/admin/bookings" className="nav-link">▦ الحجوزات</Link>
           <Link href="/admin/growth" className="nav-link">↗ مؤشرات النمو</Link>
           <Link href="/admin/marketing" className="nav-link nav-link-active">★ التسويق بالعمولة</Link>
+          <Link href="/admin/services" className="nav-link">◇ الخدمات والعروض</Link>
         </nav>
         <div className="sidebar-bottom">خاص بمالك الورشة والمدير<br/><small>بيانات كل ورشة معزولة</small></div>
       </aside>

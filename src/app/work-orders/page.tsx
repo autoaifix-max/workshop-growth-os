@@ -81,6 +81,54 @@ export default function WorkOrdersPage() {
   }
 
 
+  async function recordDelivery(item: WorkOrder) {
+    if (item.status !== "completed") return;
+    if (!window.confirm("تأكيد توثيق تسليم السيارة للعميل؟ سيظهر التحديث في رابط تتبع العميل.")) return;
+    setUpdatingId(item.id);
+    setFeedback("");
+    try {
+      const response = await fetch("/api/v1/service-tracking/events", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ workOrderId: item.id, eventType: "vehicle_delivered" }),
+      });
+      if (redirectIfUnauthorized(response)) return;
+      const payload = await response.json() as { ok: boolean; error?: { message?: string } | null };
+      if (!response.ok || !payload.ok) throw new Error(payload.error?.message || "تعذر توثيق تسليم السيارة.");
+      setFeedback("تم توثيق تسليم السيارة، وظهر التحديث في رابط العميل.");
+      await load();
+    } catch (cause) {
+      setFeedback(cause instanceof Error ? cause.message : "تعذر توثيق تسليم السيارة.");
+    } finally {
+      setUpdatingId(null);
+    }
+  }
+
+  async function recordCustomerNote(item: WorkOrder) {
+    const title = window.prompt("عنوان التحديث الذي سيظهر للعميل (مثال: انتهى الفحص الأولي)");
+    if (!title?.trim()) return;
+    const description = window.prompt("تفاصيل التحديث أو الملاحظات (لا تضع بيانات حساسة)");
+    if (description === null) return;
+    setUpdatingId(item.id);
+    setFeedback("");
+    try {
+      const response = await fetch("/api/v1/service-tracking/events", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ workOrderId: item.id, eventType: "note", title: title.trim(), description: description.trim() }),
+      });
+      if (redirectIfUnauthorized(response)) return;
+      const payload = await response.json() as { ok: boolean; error?: { message?: string } | null };
+      if (!response.ok || !payload.ok) throw new Error(payload.error?.message || "تعذر حفظ تحديث العميل.");
+      setFeedback("تم حفظ التحديث وظهر في رابط تتبع العميل.");
+      await load();
+    } catch (cause) {
+      setFeedback(cause instanceof Error ? cause.message : "تعذر حفظ تحديث العميل.");
+    } finally {
+      setUpdatingId(null);
+    }
+  }
+
   return (
     <main className="admin-shell">
       <aside className="admin-sidebar">
@@ -116,7 +164,7 @@ export default function WorkOrdersPage() {
             {error && <div className="empty-state"><strong>تعذر تحميل أوامر العمل</strong><p>{error}</p><button className="secondary-button" type="button" onClick={() => void load()}>إعادة المحاولة</button></div>}
             {!error && loading && <div className="empty-state"><strong>جارٍ تحميل أوامر العمل…</strong></div>}
             {!error && !loading && items.length === 0 && <div className="empty-state"><strong>لا توجد أوامر عمل مسجلة</strong><p>ابدأ من صفحة الحجوزات ثم اختر «تحويل إلى أمر عمل» لحجز قابل للتحويل.</p><Link className="primary-button" href="/admin/bookings">فتح الحجوزات</Link></div>}
-            {!error && !loading && items.length > 0 && <div className="booking-table-wrap"><table className="booking-table"><thead><tr><th>رقم الأمر</th><th>العميل</th><th>المركبة</th><th>الخدمة</th><th>الحالة</th><th>تاريخ الإنشاء</th></tr></thead><tbody>{items.map((item) => <tr key={item.id}><td><strong>{item.id.slice(0, 8)}</strong><small className="table-subline">حجز {item.booking_id.slice(0, 8)}</small></td><td><strong>{item.customers?.full_name ?? "عميل"}</strong><small className="table-subline" dir="ltr">{item.customers?.phone ?? "—"}</small></td><td>{item.vehicles ? `${item.vehicles.make} ${item.vehicles.model}` : "لم تحدد مركبة"}<small className="table-subline">{item.vehicles?.plate_number ?? "—"}</small></td><td>{item.requested_service}</td><td><div className="work-order-status-cell"><span className={"status-badge status-" + item.status}><span />{statusLabels[item.status]}</span><select className="work-order-status-select" aria-label={`تغيير حالة أمر العمل ${item.id.slice(0, 8)}`} value={item.status} disabled={updatingId === item.id || getAllowedWorkOrderStatusTransitions(item.status).length === 0} onChange={(event) => void updateStatus(item, event.target.value as WorkOrderStatus)}>{[item.status, ...getAllowedWorkOrderStatusTransitions(item.status)].map((status) => <option key={status} value={status}>{statusLabels[status]}</option>)}</select></div></td><td>{dateFormat(item.created_at)}</td></tr>)}</tbody></table></div>}
+            {!error && !loading && items.length > 0 && <div className="booking-table-wrap"><table className="booking-table"><thead><tr><th>رقم الأمر</th><th>العميل</th><th>المركبة</th><th>الخدمة</th><th>الحالة</th><th>تاريخ الإنشاء</th><th>توثيق للعميل</th></tr></thead><tbody>{items.map((item) => <tr key={item.id}><td><strong>{item.id.slice(0, 8)}</strong><small className="table-subline">حجز {item.booking_id.slice(0, 8)}</small></td><td><strong>{item.customers?.full_name ?? "عميل"}</strong><small className="table-subline" dir="ltr">{item.customers?.phone ?? "—"}</small></td><td>{item.vehicles ? `${item.vehicles.make} ${item.vehicles.model}` : "لم تحدد مركبة"}<small className="table-subline">{item.vehicles?.plate_number ?? "—"}</small></td><td>{item.requested_service}</td><td><div className="work-order-status-cell"><span className={"status-badge status-" + item.status}><span />{statusLabels[item.status]}</span><select className="work-order-status-select" aria-label={`تغيير حالة أمر العمل ${item.id.slice(0, 8)}`} value={item.status} disabled={updatingId === item.id || getAllowedWorkOrderStatusTransitions(item.status).length === 0} onChange={(event) => void updateStatus(item, event.target.value as WorkOrderStatus)}>{[item.status, ...getAllowedWorkOrderStatusTransitions(item.status)].map((status) => <option key={status} value={status}>{statusLabels[status]}</option>)}</select></div></td><td>{dateFormat(item.created_at)}</td><td><div style={{display:"grid",gap:6,justifyItems:"start"}}><button className="details-button" type="button" disabled={updatingId === item.id || item.status === "cancelled"} onClick={() => void recordCustomerNote(item)}>إضافة تحديث</button>{item.status === "completed" ? <button className="details-button" type="button" disabled={updatingId === item.id} onClick={() => void recordDelivery(item)}>{updatingId === item.id ? "جارٍ التوثيق…" : "توثيق التسليم"}</button> : <span className="muted">التسليم بعد اكتمال الإصلاح</span>}</div></td></tr>)}</tbody></table></div>}
             <div className="table-footer"><span>المصدر: API الورشة</span><Link className="wg-text-link" href="/admin/bookings">إدارة الحجوزات ←</Link></div>
           </section>
         </main>
