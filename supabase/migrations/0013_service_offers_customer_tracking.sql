@@ -225,3 +225,44 @@ revoke all on function public.get_public_service_tracking(text) from public;
 grant execute on function public.get_public_service_offer(text) to anon, authenticated;
 grant execute on function public.create_public_service_booking(text,text,text,text,text,text,integer,timestamptz,text,text) to anon, authenticated;
 grant execute on function public.get_public_service_tracking(text) to anon, authenticated;
+
+
+-- Public catalog for the services landing page. It intentionally exposes only published offer fields.
+create or replace function public.get_public_service_offers()
+returns jsonb language sql stable security definer
+set search_path = pg_catalog, public
+as $$
+ select coalesce(jsonb_agg(jsonb_build_object(
+   'slug',o.slug,'title',o.title,'description',o.description,'basePrice',o.base_price,
+   'discountType',o.discount_type,'discountValue',o.discount_value,
+   'discountAmount',round(least(o.base_price,case when o.discount_type='percent' then o.base_price*o.discount_value/100 else o.discount_value end),2),
+   'finalPrice',round(greatest(0,o.base_price-least(o.base_price,case when o.discount_type='percent' then o.base_price*o.discount_value/100 else o.discount_value end)),2),
+   'terms',o.terms,'expiresAt',o.expires_at,'workshopName',w.name
+ ) order by o.created_at desc), '[]'::jsonb)
+ from public.service_offers o join public.workshops w on w.id=o.workshop_id
+ where o.status='active' and w.status='active'
+   and (o.starts_at is null or o.starts_at <= now())
+   and (o.expires_at is null or o.expires_at > now());
+$$;
+
+create or replace function public.record_booking_tracking_event()
+returns trigger language plpgsql security definer
+set search_path = pg_catalog, public
+as $$
+begin
+ if new.status='confirmed' and new.status is distinct from old.status then
+   insert into public.service_tracking_events(workshop_id,booking_id,event_type,title,description,visible_to_customer,created_by)
+   values(new.workshop_id,new.id,'booking_confirmed','تم تأكيد موعدك',
+     'أكدت الورشة موعد الحجز. ستظهر هنا تحديثات السيارة بعد استقبالها.',true,
+     case when auth.uid() is not null then auth.uid() else new.created_by end);
+ end if;
+ return new;
+end;
+$$;
+drop trigger if exists booking_tracking_confirmation on public.bookings;
+create trigger booking_tracking_confirmation
+after update of status on public.bookings
+for each row execute function public.record_booking_tracking_event();
+
+revoke all on function public.get_public_service_offers() from public;
+grant execute on function public.get_public_service_offers() to anon, authenticated;
