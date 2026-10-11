@@ -32,6 +32,7 @@ export default function InfluencerMarketingPage() {
   const [workOrderId, setWorkOrderId] = useState("");
   const [collectedAmount, setCollectedAmount] = useState("");
   const [paymentConfirmed, setPaymentConfirmed] = useState(false);
+  const [paymentReference, setPaymentReference] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -83,6 +84,22 @@ export default function InfluencerMarketingPage() {
       setWorkOrderId(""); setCollectedAmount(""); setPaymentConfirmed(false);
       setMessage("سُجلت العمولة للمراجعة، ولم تُسجل كمدفوعة."); await load();
     } catch (cause) { setError(cause instanceof Error ? cause.message : "تعذر تسجيل العمولة."); }
+    finally { setSaving(false); }
+  }
+
+  async function updateCommission(id: string, action: "approve" | "mark_paid" | "cancel") {
+    setSaving(true); setError(""); setMessage("");
+    try {
+      const response = await fetch("/api/v1/marketing/commission-status", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, action, paymentReference }),
+      });
+      if (redirectIfUnauthorized(response)) return;
+      const result = await response.json() as Payload<Commission>;
+      if (!response.ok || !result.ok) throw new Error(result.error?.message || "تعذر تحديث حالة العمولة.");
+      setMessage(action === "approve" ? "تم اعتماد العمولة." : action === "mark_paid" ? "تم تسجيل العمولة كمدفوعة مع مرجع الدفع." : "تم إلغاء العمولة.");
+      await load();
+    } catch (cause) { setError(cause instanceof Error ? cause.message : "تعذر تحديث حالة العمولة."); }
     finally { setSaving(false); }
   }
 
@@ -144,8 +161,9 @@ export default function InfluencerMarketingPage() {
           </section>
 
           <section className="booking-panel">
-            <div className="panel-heading"><div><h2>سجل العمولات</h2><p>كل أمر عمل مؤهل يُحتسب مرة واحدة فقط.</p></div></div>
-            {loading ? <div className="empty-state">جارٍ التحميل…</div> : commissions.length === 0 ? <div className="empty-state">لا توجد عمولات مسجلة.</div> : <div className="table-scroll"><table><thead><tr><th>المسوق</th><th>أمر العمل</th><th>المبلغ المحصل</th><th>العمولة</th><th>الحالة</th></tr></thead><tbody>{commissions.map((c) => <tr key={c.id}><td>{c.marketing_partners?.name ?? c.partner_id}</td><td><code>{c.work_order_id.slice(0, 8)}…</code></td><td>{money(Number(c.collected_amount))}</td><td><strong>{money(Number(c.commission_amount))}</strong></td><td>{statusLabel[c.status]}</td></tr>)}</tbody></table></div>}
+            <div className="panel-heading"><div><h2>سجل العمولات</h2><p>كل أمر عمل مؤهل يُحتسب مرة واحدة فقط. يلزم مرجع تحويل لتسجيل الصرف.</p></div></div>
+            <label className="booking-create-field"><span>مرجع التحويل / سند الدفع</span><input maxLength={160} value={paymentReference} onChange={(e) => setPaymentReference(e.target.value)} placeholder="رقم الحوالة أو السند" /></label>
+            {loading ? <div className="empty-state">جارٍ التحميل…</div> : commissions.length === 0 ? <div className="empty-state">لا توجد عمولات مسجلة.</div> : <div className="table-scroll"><table><thead><tr><th>المسوق</th><th>أمر العمل</th><th>المبلغ المحصل</th><th>العمولة</th><th>الحالة والإجراء</th></tr></thead><tbody>{commissions.map((c) => <tr key={c.id}><td>{c.marketing_partners?.name ?? c.partner_id}</td><td><code>{c.work_order_id.slice(0, 8)}…</code></td><td>{money(Number(c.collected_amount))}</td><td><strong>{money(Number(c.commission_amount))}</strong></td><td><span>{statusLabel[c.status]}</span><div className="booking-create-actions">{c.status === "pending_review" && <><button className="secondary-button" type="button" disabled={saving} onClick={() => void updateCommission(c.id, "approve")}>اعتماد</button><button className="secondary-button" type="button" disabled={saving} onClick={() => void updateCommission(c.id, "cancel")}>إلغاء</button></>}{c.status === "approved" && <><button className="primary-button" type="button" disabled={saving || !paymentReference.trim()} onClick={() => void updateCommission(c.id, "mark_paid")}>تسجيل الصرف</button><button className="secondary-button" type="button" disabled={saving} onClick={() => void updateCommission(c.id, "cancel")}>إلغاء</button></>}</div></td></tr>)}</tbody></table></div>}
           </section>
           <div className="preview-notice"><div><strong>مهم قبل الصرف</strong><p>تسجيل العمولة هنا لا يحول الأموال تلقائيًا. يلزم اعتماد العمولة وإثبات التحويل في سجل الدفع. حاليًا، الاعتماد والصرف الآلي غير مفعّلين.</p></div></div>
           <footer className="admin-footer"><span>Workshop Growth OS</span><span>التسويق بالعمولة · RTL</span></footer>
