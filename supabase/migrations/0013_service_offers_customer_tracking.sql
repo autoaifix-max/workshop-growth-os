@@ -67,7 +67,7 @@ grant select,insert on public.service_tracking_events to authenticated;
 
 create or replace function public.get_public_service_offer(p_slug text)
 returns jsonb language plpgsql stable security definer
-set search_path = pg_catalog, public
+set search_path = pg_catalog, public, extensions
 as $$
 declare result jsonb;
 begin
@@ -91,7 +91,7 @@ create or replace function public.create_public_service_booking(
  p_make text, p_model text, p_model_year integer, p_scheduled_at timestamptz,
  p_notes text, p_tracking_token text
 ) returns jsonb language plpgsql security definer
-set search_path = pg_catalog, public
+set search_path = pg_catalog, public, extensions
 as $$
 declare
  o public.service_offers%rowtype;
@@ -160,7 +160,7 @@ $$;
 
 create or replace function public.get_public_service_tracking(p_tracking_token text)
 returns jsonb language plpgsql stable security definer
-set search_path = pg_catalog, public
+set search_path = pg_catalog, public, extensions
 as $$
 declare result jsonb;
 begin
@@ -183,7 +183,7 @@ $$;
 
 create or replace function public.record_work_order_tracking_event()
 returns trigger language plpgsql security definer
-set search_path = pg_catalog, public
+set search_path = pg_catalog, public, extensions
 as $$
 declare event_kind text; event_title text; event_description text;
 begin
@@ -230,7 +230,7 @@ grant execute on function public.get_public_service_tracking(text) to anon, auth
 -- Public catalog for the services landing page. It intentionally exposes only published offer fields.
 create or replace function public.get_public_service_offers()
 returns jsonb language sql stable security definer
-set search_path = pg_catalog, public
+set search_path = pg_catalog, public, extensions
 as $$
  select coalesce(jsonb_agg(jsonb_build_object(
    'slug',o.slug,'title',o.title,'description',o.description,'basePrice',o.base_price,
@@ -247,7 +247,7 @@ $$;
 
 create or replace function public.record_booking_tracking_event()
 returns trigger language plpgsql security definer
-set search_path = pg_catalog, public
+set search_path = pg_catalog, public, extensions
 as $$
 begin
  if new.status='confirmed' and new.status is distinct from old.status then
