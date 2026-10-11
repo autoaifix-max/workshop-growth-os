@@ -89,3 +89,43 @@ textarea.wg-input { resize:vertical; line-height:1.7; }
 .work-order-status-select:disabled{opacity:.7;cursor:not-allowed}
 .work-order-feedback{margin:0 22px 14px;padding:10px 12px;border-radius:9px;background:#e9f9ef;color:#146b37;font-size:12px;line-height:1.7}
 @media(max-width:700px){.work-order-feedback{margin:0 14px 12px}}
+
+
+/* Public service offer, booking, and customer tracking pages */
+.public-service-shell{width:min(920px,calc(100% - 28px));margin:0 auto;padding-bottom:26px;color:#202124}
+.public-service-header{display:flex;align-items:center;justify-content:space-between;gap:14px;min-height:86px;border-bottom:1px solid #e7e9ed}
+.public-service-header .admin-brand{border:0;padding:0}
+.public-service-hero{margin:24px 0 16px;padding:clamp(22px,5vw,40px);border-radius:22px;background:#191919;color:#fff;box-shadow:0 16px 40px rgba(0,0,0,.08)}
+.public-service-hero .admin-eyebrow{color:#ffd100}
+.public-service-hero h1{font-size:clamp(27px,5vw,42px);line-height:1.35;margin:12px 0}
+.public-service-hero>p:not(.admin-eyebrow){color:#e0e0e0;line-height:1.9;max-width:680px}
+.public-offer-tag{display:inline-flex;background:#ffd100;color:#1b1b1b;border-radius:999px;padding:7px 11px;font-size:11px;font-weight:800}
+.public-price-row{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:24px 0 10px}
+.public-price-row strong{font-size:clamp(29px,5vw,38px);color:#ffd100}
+.public-price-row del{color:#b9b9b9;font-size:15px}
+.public-price-row span{padding:7px 10px;border-radius:8px;background:#2d2d2d;color:#fff;font-size:12px}
+.public-terms{padding-top:12px;border-top:1px solid #3b3b3b;font-size:12px!important}
+.public-service-card{margin:16px 0;padding:clamp(18px,4vw,30px);border:1px solid #e7e9ed;border-radius:18px;background:#fff;box-shadow:0 8px 28px rgba(20,25,35,.035)}
+.public-service-card h2{font-size:19px;margin:0 0 7px}
+.public-booking-form{padding:0!important}
+.public-booking-success{display:grid;justify-items:start;gap:13px}
+.public-booking-success p{line-height:1.9;color:#666}
+.public-success-icon{display:grid;place-items:center;width:50px;height:50px;border-radius:50%;background:#e9f9ef;color:#146b37;font-size:27px;font-weight:900}
+.public-service-footer{display:flex;justify-content:space-between;gap:12px;padding:20px 0;border-top:1px solid #e7e9ed;color:#8a9099;font-size:11px}
+.tracking-card h1{font-size:clamp(25px,4vw,34px);margin:8px 0 22px}
+.tracking-summary{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px;margin:20px 0}
+.tracking-summary>div{display:flex;flex-direction:column;gap:7px;padding:14px;border:1px solid #e7e9ed;border-radius:12px;background:#fafbfc;min-width:0}
+.tracking-summary strong{font-size:13px;overflow-wrap:anywhere}
+.tracking-summary small{color:#777;font-size:11px}
+.tracking-number{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:13px 15px;border-radius:10px;background:#fff8d1;color:#5b4c00;font-size:12px}
+.tracking-section-title{margin:27px 0 18px!important}
+.tracking-timeline{list-style:none;margin:0;padding:0}
+.tracking-event{display:grid;grid-template-columns:34px minmax(0,1fr);gap:12px;position:relative;padding-bottom:22px}
+.tracking-event:not(:last-child):before{content:"";position:absolute;right:16px;top:34px;bottom:0;width:2px;background:#e6e8ec}
+.tracking-event-dot{z-index:1;display:grid;place-items:center;width:34px;height:34px;border-radius:50%;background:#fff3b4;color:#4b3e00;font-size:12px;font-weight:800}
+.tracking-event-body{padding:4px 0 0;min-width:0}
+.tracking-event-heading{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.tracking-event-heading strong{font-size:13px}
+.tracking-event-heading time{color:#858b95;font-size:10px}
+.tracking-event-body p{margin:8px 0 0;color:#626975;font-size:12px;line-height:1.8}
+@media(max-width:520px){.public-service-shell{width:calc(100% - 20px)}.public-service-header{min-height:72px}.public-service-header .admin-brand strong{font-size:12px}.public-service-header .admin-brand small{font-size:10px}.public-service-hero{margin-top:15px;border-radius:16px}.public-service-card{border-radius:14px}.tracking-summary{grid-template-columns:minmax(0,1fr)}.public-service-footer{flex-direction:column}.tracking-event-heading{display:grid;gap:5px}}
