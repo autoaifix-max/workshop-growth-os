@@ -92,6 +92,7 @@ describe("bookings API tenant and request guards", () => {
     expect(insert).toHaveBeenCalledWith({
       workshop_id: tenantContext.workshopId,
       customer_id: "33333333-3333-4333-8333-333333333333",
+      marketing_partner_id: null,
       vehicle_id: "44444444-4444-4444-8444-444444444444",
       requested_service: "فحص كمبيوتر",
       scheduled_at: "2026-10-12T07:00:00.000Z",

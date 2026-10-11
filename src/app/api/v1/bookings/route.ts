@@ -10,6 +10,7 @@ const createBookingSchema = z.object({
   requestedService: z.string().trim().min(2).max(160),
   scheduledAt: z.string().datetime({ offset: true }),
   notes: z.string().trim().max(2000).optional().default(""),
+  referralCode: z.string().trim().min(3).max(32).optional(),
 }).strict();
 const updateBookingSchema = z.object({
   id: z.string().uuid(),
@@ -86,8 +87,20 @@ export async function POST(request: Request) {
       if (!vehicle) return failure("VEHICLE_NOT_FOUND", "السيارة لا تتبع هذا العميل أو هذه الورشة", 404);
     }
 
+    let marketingPartnerId: string | null = null;
+    if (parsed.data.referralCode) {
+      const code = parsed.data.referralCode.toUpperCase();
+      const { data: referral, error: partnerError } = await client.from("marketing_referral_codes")
+        .select("partner_id").eq("workshop_id", tenant.context.workshopId)
+        .eq("referral_code", code).eq("status", "active").maybeSingle();
+      if (partnerError) throw partnerError;
+      if (!referral) return failure("INVALID_REFERRAL_CODE", "رمز الإحالة غير صالح أو غير نشط", 400);
+      marketingPartnerId = referral.partner_id;
+    }
+
     const { data, error } = await client.from("bookings").insert({
       workshop_id: tenant.context.workshopId,
+      marketing_partner_id: marketingPartnerId,
       customer_id: parsed.data.customerId,
       vehicle_id: parsed.data.vehicleId ?? null,
       requested_service: parsed.data.requestedService,
