@@ -76,10 +76,14 @@ export async function GET() {
   try {
     client = await getSupabaseServerClient();
   } catch (cause) {
+    const configMissing =
+      cause instanceof Error && cause.message === "Supabase configuration is missing";
     logReadinessFailure("client_init", {
       name: cause instanceof Error ? cause.name : typeof cause,
     });
-    return readyResponse("DATABASE_UNAVAILABLE");
+    return readyResponse(
+      configMissing ? "SUPABASE_CONFIGURATION_MISSING" : "DATABASE_UNAVAILABLE",
+    );
   }
 
   try {
