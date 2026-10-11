@@ -56,6 +56,7 @@ function CreateBookingPanel({ onCreated }: { onCreated: () => Promise<void> }) {
   const [requestedService, setRequestedService] = useState("");
   const [scheduledAt, setScheduledAt] = useState("");
   const [notes, setNotes] = useState("");
+  const [referralCode, setReferralCode] = useState("");
   const [loadingOptions, setLoadingOptions] = useState(true);
   const [optionsError, setOptionsError] = useState("");
   const [saving, setSaving] = useState(false);
@@ -116,6 +117,7 @@ function CreateBookingPanel({ onCreated }: { onCreated: () => Promise<void> }) {
           requestedService,
           scheduledAt: scheduled.toISOString(),
           notes,
+          ...(referralCode.trim() ? { referralCode: referralCode.trim().toUpperCase() } : {}),
         }),
       });
       if (redirectIfUnauthorized(response)) return;
@@ -126,6 +128,7 @@ function CreateBookingPanel({ onCreated }: { onCreated: () => Promise<void> }) {
       setRequestedService("");
       setScheduledAt("");
       setNotes("");
+      setReferralCode("");
       setVehicleId("");
       setMessage("تم إنشاء الحجز بنجاح.");
       await onCreated();
@@ -172,6 +175,10 @@ function CreateBookingPanel({ onCreated }: { onCreated: () => Promise<void> }) {
         <label className="booking-create-field booking-create-span-2">
           <span>موعد الحجز *</span>
           <input required type="datetime-local" value={scheduledAt} onChange={(event) => setScheduledAt(event.target.value)} />
+        </label>
+        <label className="booking-create-field booking-create-span-2">
+          <span>رمز إحالة المشهور (اختياري)</span>
+          <input maxLength={32} pattern="[A-Za-z0-9_-]+" value={referralCode} onChange={(event) => setReferralCode(event.target.value.toUpperCase())} placeholder="مثال: AHMAD10" />
         </label>
         <label className="booking-create-field booking-create-full">
           <span>ملاحظات (اختياري)</span>
