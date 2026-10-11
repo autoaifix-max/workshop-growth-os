@@ -258,6 +258,18 @@ begin
   if has_function_privilege('authenticated', 'public.sync_booking_status_from_work_order()', 'EXECUTE') then
     raise exception 'Authenticated role can execute trigger-only booking synchronization function';
   end if;
+  if has_function_privilege('anon', 'public.record_booking_tracking_event()', 'EXECUTE') then
+    raise exception 'Anonymous role can execute booking tracking trigger function';
+  end if;
+  if has_function_privilege('authenticated', 'public.record_booking_tracking_event()', 'EXECUTE') then
+    raise exception 'Authenticated role can execute booking tracking trigger function';
+  end if;
+  if has_function_privilege('anon', 'public.record_work_order_tracking_event()', 'EXECUTE') then
+    raise exception 'Anonymous role can execute work-order tracking trigger function';
+  end if;
+  if has_function_privilege('authenticated', 'public.record_work_order_tracking_event()', 'EXECUTE') then
+    raise exception 'Authenticated role can execute work-order tracking trigger function';
+  end if;
 end
 $security$;
 
