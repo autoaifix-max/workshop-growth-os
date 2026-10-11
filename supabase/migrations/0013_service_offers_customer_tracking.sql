@@ -228,7 +228,7 @@ grant execute on function public.get_public_service_tracking(text) to anon, auth
 
 
 -- Public catalog for the services landing page. It intentionally exposes only published offer fields.
-create or replace function public.get_public_service_offers()
+create or replace function public.get_public_service_offers(p_workshop_slug text)
 returns jsonb language sql stable security definer
 set search_path = pg_catalog, public, extensions
 as $$
@@ -240,7 +240,7 @@ as $$
    'terms',o.terms,'expiresAt',o.expires_at,'workshopName',w.name
  ) order by o.created_at desc), '[]'::jsonb)
  from public.service_offers o join public.workshops w on w.id=o.workshop_id
- where o.status='active' and w.status='active'
+ where o.status='active' and w.status='active' and w.slug=p_workshop_slug
    and (o.starts_at is null or o.starts_at <= now())
    and (o.expires_at is null or o.expires_at > now());
 $$;
@@ -264,5 +264,5 @@ create trigger booking_tracking_confirmation
 after update of status on public.bookings
 for each row execute function public.record_booking_tracking_event();
 
-revoke all on function public.get_public_service_offers() from public;
-grant execute on function public.get_public_service_offers() to anon, authenticated;
+revoke all on function public.get_public_service_offers(text) from public;
+grant execute on function public.get_public_service_offers(text) to anon, authenticated;
