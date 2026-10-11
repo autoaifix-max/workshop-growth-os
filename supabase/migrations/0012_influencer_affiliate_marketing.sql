@@ -25,6 +25,8 @@ alter table public.bookings add constraint bookings_marketing_partner_workshop_f
  references public.marketing_partners(id, workshop_id) on delete restrict;
 create index if not exists bookings_workshop_partner_idx on public.bookings(workshop_id,marketing_partner_id,created_at desc);
 
+create unique index if not exists work_orders_id_workshop_unique on public.work_orders(id, workshop_id);
+
 create table if not exists public.marketing_commissions (
  id uuid primary key default gen_random_uuid(),
  workshop_id uuid not null references public.workshops(id) on delete cascade,
