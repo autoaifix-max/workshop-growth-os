@@ -28,12 +28,15 @@ export async function GET() {
     const tenant = await requireTenantContext(client);
     if (!tenant.ok) return tenant.response;
     if (!["owner", "admin"].includes(tenant.context.role)) return fail("FORBIDDEN", "إدارة العروض متاحة للمالك أو المدير فقط", 403);
-    const { data, error } = await client.from("service_offers")
-      .select("id,slug,title,description,base_price,discount_type,discount_value,terms,starts_at,expires_at,status,created_at,marketing_partner_id,marketing_partners(name,referral_code)")
-      .eq("workshop_id", tenant.context.workshopId)
-      .order("created_at", { ascending: false }).limit(100);
-    if (error) throw error;
-    return NextResponse.json({ ok: true, data: { items: data ?? [] }, error: null });
+    const [{ data, error }, { data: workshop, error: workshopError }] = await Promise.all([
+      client.from("service_offers")
+        .select("id,slug,title,description,base_price,discount_type,discount_value,terms,starts_at,expires_at,status,created_at,marketing_partner_id,marketing_partners(name,referral_code)")
+        .eq("workshop_id", tenant.context.workshopId)
+        .order("created_at", { ascending: false }).limit(100),
+      client.from("workshops").select("slug").eq("id", tenant.context.workshopId).maybeSingle(),
+    ]);
+    if (error || workshopError) throw error ?? workshopError;
+    return NextResponse.json({ ok: true, data: { items: data ?? [], workshopSlug: workshop?.slug ?? null }, error: null });
   } catch {
     return fail("SERVER_ERROR", "تعذر تحميل العروض. تحقق من ترحيل قاعدة البيانات.", 500);
   }
