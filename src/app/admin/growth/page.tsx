@@ -61,6 +61,7 @@ export default function WorkshopGrowthPage() {
         <nav className="admin-nav" aria-label="التنقل الرئيسي">
           <Link href="/admin/bookings" className="nav-link">▦ الحجوزات</Link>
           <Link href="/admin/growth" className="nav-link nav-link-active">↗ مؤشرات النمو</Link>
+          <Link href="/admin/marketing" className="nav-link">★ التسويق بالعمولة</Link>
         </nav>
         <div className="sidebar-bottom"><span className="online-dot" />مؤشرات قراءة فقط<br /><small>من بيانات الورشة الحالية</small></div>
       </aside>
