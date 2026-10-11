@@ -129,3 +129,13 @@ textarea.wg-input { resize:vertical; line-height:1.7; }
 .tracking-event-heading time{color:#858b95;font-size:10px}
 .tracking-event-body p{margin:8px 0 0;color:#626975;font-size:12px;line-height:1.8}
 @media(max-width:520px){.public-service-shell{width:calc(100% - 20px)}.public-service-header{min-height:72px}.public-service-header .admin-brand strong{font-size:12px}.public-service-header .admin-brand small{font-size:10px}.public-service-hero{margin-top:15px;border-radius:16px}.public-service-card{border-radius:14px}.tracking-summary{grid-template-columns:minmax(0,1fr)}.public-service-footer{flex-direction:column}.tracking-event-heading{display:grid;gap:5px}}
+
+
+.public-service-catalog{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin:16px 0}
+.public-offer-card{min-width:0;padding:20px;border:1px solid #e7e9ed;border-radius:16px;background:#fff}
+.public-offer-card h2{margin:18px 0 8px;font-size:19px}
+.public-offer-card>p{min-height:44px;color:#69707a;font-size:12px;line-height:1.8}
+.public-offer-card .public-price-row{margin:18px 0}
+.public-offer-card .public-price-row strong{font-size:28px}
+.public-offer-button{width:100%;margin-top:14px;text-decoration:none}
+@media(max-width:600px){.public-service-catalog{grid-template-columns:minmax(0,1fr)}.public-offer-card{padding:16px}.public-offer-card>p{min-height:0}}
