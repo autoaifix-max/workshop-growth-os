@@ -13,7 +13,13 @@ export default function ServicesCatalogPage() {
   const [error, setError] = useState("");
   useEffect(() => {
     let active = true;
-    fetch("/api/public/services", { cache: "no-store" })
+    const workshopSlug = new URLSearchParams(window.location.search).get("workshop") ?? "";
+    if (!workshopSlug) {
+      setError("افتح رابط كتالوج الخدمات الذي وفرته لك الورشة.");
+      setLoading(false);
+      return () => { active = false; };
+    }
+    fetch(`/api/public/services?workshop=${encodeURIComponent(workshopSlug)}`, { cache: "no-store" })
       .then(async (response) => {
         const payload = await response.json() as Payload;
         if (!response.ok || !payload.ok) throw new Error(payload.error?.message || "تعذر تحميل الخدمات.");
