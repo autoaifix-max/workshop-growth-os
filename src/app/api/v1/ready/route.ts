@@ -36,17 +36,9 @@ const readyResponse = (failure?: ReadinessFailure) =>
     },
   );
 
-export function classifyDatabaseError(
-  code?: string,
-  status?: number,
-): ReadinessFailure {
-  if (code === "42501" || status === 401 || status === 403) {
-    return "DATABASE_PERMISSION_DENIED";
-  }
-  if (
-    ["42P01", "PGRST204", "PGRST205"].includes(code ?? "") ||
-    status === 404
-  ) {
+export function classifyDatabaseError(code?: string): ReadinessFailure {
+  if (code === "42501") return "DATABASE_PERMISSION_DENIED";
+  if (["42P01", "PGRST204", "PGRST205"].includes(code ?? "")) {
     return "CORE_SCHEMA_UNAVAILABLE";
   }
   return "DATABASE_UNAVAILABLE";
@@ -58,7 +50,6 @@ function logReadinessFailure(
   stage: "configuration" | "client_init" | "database_query" | "database_exception",
   details: {
     code?: unknown;
-    status?: unknown;
     name?: unknown;
     missingUrl?: boolean;
     missingAnonKey?: boolean;
@@ -67,7 +58,6 @@ function logReadinessFailure(
   console.error("[readiness] dependency check failed", {
     stage,
     code: typeof details.code === "string" ? details.code : null,
-    status: typeof details.status === "number" ? details.status : null,
     name: typeof details.name === "string" ? details.name : null,
     missingUrl: details.missingUrl ?? null,
     missingAnonKey: details.missingAnonKey ?? null,
@@ -99,10 +89,9 @@ export async function GET() {
     if (error) {
       logReadinessFailure("database_query", {
         code: error.code,
-        status: error.status,
         name: error.name,
       });
-      return readyResponse(classifyDatabaseError(error.code, error.status));
+      return readyResponse(classifyDatabaseError(error.code));
     }
     return readyResponse();
   } catch (cause) {
