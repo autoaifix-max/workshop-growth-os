@@ -65,3 +65,23 @@ create policy "workshop managers update commissions" on public.marketing_commiss
  using (exists(select 1 from public.workshop_memberships m where m.workshop_id=marketing_commissions.workshop_id and m.user_id=auth.uid() and m.status='active' and m.role in ('owner','admin')))
  with check (exists(select 1 from public.workshop_memberships m where m.workshop_id=marketing_commissions.workshop_id and m.user_id=auth.uid() and m.status='active' and m.role in ('owner','admin')));
 grant select, insert, update on public.marketing_partners, public.marketing_commissions to authenticated;
+
+-- Minimal referral-code index: workshop staff can resolve codes without seeing partner contact details.
+create table if not exists public.marketing_referral_codes (
+ id uuid primary key default gen_random_uuid(),
+ workshop_id uuid not null,
+ partner_id uuid not null,
+ referral_code text not null,
+ status text not null default 'active' check (status in ('active','inactive')),
+ created_at timestamptz not null default now(),
+ foreign key (partner_id, workshop_id) references public.marketing_partners(id, workshop_id) on delete cascade,
+ unique(workshop_id, referral_code),
+ unique(partner_id)
+);
+create index if not exists marketing_referral_codes_lookup_idx on public.marketing_referral_codes(workshop_id, referral_code, status);
+alter table public.marketing_referral_codes enable row level security;
+create policy "members resolve referral codes" on public.marketing_referral_codes for select to authenticated
+ using (status='active' and exists(select 1 from public.workshop_memberships m join public.workshops w on w.id=m.workshop_id where m.workshop_id=marketing_referral_codes.workshop_id and m.user_id=auth.uid() and m.status='active' and w.status='active'));
+create policy "managers add referral codes" on public.marketing_referral_codes for insert to authenticated
+ with check (exists(select 1 from public.workshop_memberships m where m.workshop_id=marketing_referral_codes.workshop_id and m.user_id=auth.uid() and m.status='active' and m.role in ('owner','admin')));
+grant select, insert on public.marketing_referral_codes to authenticated;
