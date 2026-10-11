@@ -51,25 +51,46 @@ describe("GET /api/v1/ready", () => {
     expect(db.limit).toHaveBeenCalledWith(1);
   });
 
-  it("returns 503 when the core table query fails", async () => {
-    setup({ queryError: { code: "42P01" } });
+  it("identifies an unavailable core schema without exposing database error details", async () => {
+    setup({ queryError: { code: "PGRST205" } });
     const response = await GET();
     const payload = await response.json();
 
     expect(response.status).toBe(503);
     expect(payload.ok).toBe(false);
-    expect(payload.error.code).toBe("NOT_READY");
+    expect(payload.error.code).toBe("CORE_SCHEMA_UNAVAILABLE");
     expect(payload.error.message).toBe("خدمة قاعدة البيانات غير جاهزة");
-    expect(JSON.stringify(payload)).not.toContain("42P01");
+    expect(JSON.stringify(payload)).not.toContain("PGRST205");
   });
 
-  it("returns 503 when Supabase configuration or client creation fails", async () => {
+  it("identifies an RLS/table permission configuration problem without exposing raw errors", async () => {
+    setup({ queryError: { code: "42501" } });
+    const response = await GET();
+    const payload = await response.json();
+
+    expect(response.status).toBe(503);
+    expect(payload.error.code).toBe("DATABASE_PERMISSION_DENIED");
+    expect(JSON.stringify(payload)).not.toContain("42501");
+  });
+
+  it("identifies a configuration problem without exposing the config error", async () => {
     setup({ configError: new Error("Supabase configuration is missing") });
     const response = await GET();
     const payload = await response.json();
 
     expect(response.status).toBe(503);
-    expect(payload.error.code).toBe("NOT_READY");
+    expect(payload.error.code).toBe("SUPABASE_CONFIGURATION_MISSING");
+    expect(payload.error.message).toBe("خدمة قاعدة البيانات غير جاهزة");
     expect(JSON.stringify(payload)).not.toContain("Supabase configuration is missing");
+  });
+
+  it("falls back to a generic database-unavailable code for unexpected failures", async () => {
+    setup({ configError: new Error("internal host and secret detail") });
+    const response = await GET();
+    const payload = await response.json();
+
+    expect(response.status).toBe(503);
+    expect(payload.error.code).toBe("DATABASE_UNAVAILABLE");
+    expect(JSON.stringify(payload)).not.toContain("internal host and secret detail");
   });
 });
