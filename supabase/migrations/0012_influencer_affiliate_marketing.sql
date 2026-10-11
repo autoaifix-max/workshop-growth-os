@@ -86,6 +86,3 @@ create policy "managers add referral codes" on public.marketing_referral_codes f
  with check (exists(select 1 from public.workshop_memberships m where m.workshop_id=marketing_referral_codes.workshop_id and m.user_id=auth.uid() and m.status='active' and m.role in ('owner','admin')));
 grant select, insert on public.marketing_referral_codes to authenticated;
 
--- Active workshop staff can validate referral codes while recording a booking.
-create policy "active workshop staff read active referral partners" on public.marketing_partners for select to authenticated
- using (status='active' and exists(select 1 from public.workshop_memberships m join public.workshops w on w.id=m.workshop_id where m.workshop_id=marketing_partners.workshop_id and m.user_id=auth.uid() and m.status='active' and w.status='active'));
