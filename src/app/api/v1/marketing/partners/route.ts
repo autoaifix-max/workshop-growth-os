@@ -53,6 +53,8 @@ export async function POST(request: Request) {
     }).select("id,name,platform,handle,contact,referral_code,commission_type,commission_value,status,created_at").single();
     if (error?.code === "23505") return fail("REFERRAL_CODE_EXISTS", "رمز الإحالة مستخدم في هذه الورشة؛ اختر رمزًا آخر", 409);
     if (error) throw error;
+    const codeIndex = await client.from("marketing_referral_codes").insert({ workshop_id: tenant.context.workshopId, partner_id: data.id, referral_code: data.referral_code, status: data.status });
+    if (codeIndex.error) return fail("REFERRAL_CODE_INDEX_FAILED", "تعذر تفعيل رمز الإحالة؛ راجع سجل المسوق قبل استخدامه", 500);
     return NextResponse.json({ ok: true, data, error: null }, { status: 201, headers: { "Cache-Control": "private, no-store" } });
   } catch {
     return fail("SERVER_ERROR", "تعذر حفظ المسوق. تحقق من إعدادات قاعدة البيانات.", 500);
