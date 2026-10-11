@@ -1,13 +1,8 @@
 import { NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
+import { classifyDatabaseError, type ReadinessFailure } from "@/lib/readiness/classify-database-error";
 
 export const dynamic = "force-dynamic";
-
-type ReadinessFailure =
-  | "SUPABASE_CONFIGURATION_MISSING"
-  | "CORE_SCHEMA_UNAVAILABLE"
-  | "DATABASE_PERMISSION_DENIED"
-  | "DATABASE_UNAVAILABLE";
 
 const readyResponse = (failure?: ReadinessFailure) =>
   NextResponse.json(
@@ -35,14 +30,6 @@ const readyResponse = (failure?: ReadinessFailure) =>
       headers: { "Cache-Control": "no-store" },
     },
   );
-
-export function classifyDatabaseError(code?: string): ReadinessFailure {
-  if (code === "42501") return "DATABASE_PERMISSION_DENIED";
-  if (["42P01", "PGRST204", "PGRST205"].includes(code ?? "")) {
-    return "CORE_SCHEMA_UNAVAILABLE";
-  }
-  return "DATABASE_UNAVAILABLE";
-}
 
 // Log only safe diagnostic metadata. Never log credentials, request cookies,
 // customer/workshop data, raw error messages, or full Supabase error objects.
