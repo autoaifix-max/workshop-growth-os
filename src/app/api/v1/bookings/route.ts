@@ -90,12 +90,12 @@ export async function POST(request: Request) {
     let marketingPartnerId: string | null = null;
     if (parsed.data.referralCode) {
       const code = parsed.data.referralCode.toUpperCase();
-      const { data: partner, error: partnerError } = await client.from("marketing_partners")
-        .select("id").eq("workshop_id", tenant.context.workshopId)
+      const { data: referral, error: partnerError } = await client.from("marketing_referral_codes")
+        .select("partner_id").eq("workshop_id", tenant.context.workshopId)
         .eq("referral_code", code).eq("status", "active").maybeSingle();
       if (partnerError) throw partnerError;
-      if (!partner) return failure("INVALID_REFERRAL_CODE", "رمز الإحالة غير صالح أو غير نشط", 400);
-      marketingPartnerId = partner.id;
+      if (!referral) return failure("INVALID_REFERRAL_CODE", "رمز الإحالة غير صالح أو غير نشط", 400);
+      marketingPartnerId = referral.partner_id;
     }
 
     const { data, error } = await client.from("bookings").insert({
