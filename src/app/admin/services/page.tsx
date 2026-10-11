@@ -32,6 +32,7 @@ export default function ServiceOffersPage() {
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [origin, setOrigin] = useState("");
+  const [workshopSlug, setWorkshopSlug] = useState("");
 
   useEffect(() => { setOrigin(window.location.origin); }, []);
 
@@ -44,11 +45,12 @@ export default function ServiceOffersPage() {
       ]);
       if (redirectIfUnauthorized(offerResponse, partnerResponse)) return;
       const [offerPayload, partnerPayload] = await Promise.all([
-        offerResponse.json() as Promise<Payload<{ items: Offer[] }>>,
+        offerResponse.json() as Promise<Payload<{ items: Offer[]; workshopSlug: string | null }>>,
         partnerResponse.json() as Promise<Payload<{ items: Partner[] }>>,
       ]);
       if (!offerResponse.ok || !offerPayload.ok) throw new Error(offerPayload.error?.message || "تعذر تحميل العروض.");
       setItems(offerPayload.data?.items ?? []);
+      setWorkshopSlug(offerPayload.data?.workshopSlug ?? "");
       setPartners(partnerPayload.ok ? (partnerPayload.data?.items ?? []).filter((p) => p.status === "active") : []);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "تعذر تحميل العروض.");
@@ -95,7 +97,7 @@ export default function ServiceOffersPage() {
       <div className="sidebar-bottom"><span className="online-dot" />روابط عروض قابلة للمشاركة<br /><small>خصم + حجز + تتبع</small></div>
     </aside>
     <section className="admin-main">
-      <header className="admin-topbar"><div className="breadcrumbs">إدارة الورشة <span>/</span> الخدمات والعروض</div><Link className="secondary-button" href="/admin/marketing">إدارة المشاهير</Link></header>
+      <header className="admin-topbar"><div className="breadcrumbs">إدارة الورشة <span>/</span> الخدمات والعروض</div><div style={{display:"flex",gap:8,flexWrap:"wrap"}}><Link className="secondary-button" href="/admin/marketing">إدارة المشاهير</Link>{workshopSlug && <Link className="primary-button" href={`/services?workshop=${encodeURIComponent(workshopSlug)}`} target="_blank">معاينة كتالوج الخدمات</Link>}</div></header>
       <div className="booking-content">
         <section className="admin-page-intro"><p className="admin-eyebrow">عروض قابلة للتتبع</p><h1>الخدمات والعروض</h1><p>أنشئ صفحة خدمة برابط مستقل لكل حملة أو مشهور. العميل يرى الخصم، يحجز، ويحصل على رابط خاص لمتابعة مراحل صيانة سيارته.</p></section>
         <div className="preview-notice"><span className="notice-symbol">ⓘ</span><div><strong>قبل مشاركة الرابط</strong><p>السعر الظاهر سعر العرض المعلن. قد يتغير الإجمالي بعد فحص السيارة، ويجب توضيح أي تكلفة إضافية للعميل قبل تنفيذها. العمولة ترتبط بالمشهور المختار عند الحجز.</p></div></div>
