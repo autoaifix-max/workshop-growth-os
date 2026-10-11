@@ -13,6 +13,10 @@ import { GET } from "../src/app/api/v1/ready/route";
 afterEach(() => vi.clearAllMocks());
 
 function setup(options: { queryError?: { code?: string } | null; configError?: Error } = {}) {
+  // The readiness handler checks deployment configuration before creating a client.
+  process.env.NEXT_PUBLIC_SUPABASE_URL ??= "https://example.supabase.co";
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ??= "test-anon-key";
+
   const limit = vi.fn().mockResolvedValue({
     data: [],
     error: options.queryError ?? null,
