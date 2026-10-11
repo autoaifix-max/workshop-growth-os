@@ -86,3 +86,18 @@ create policy "managers add referral codes" on public.marketing_referral_codes f
  with check (exists(select 1 from public.workshop_memberships m where m.workshop_id=marketing_referral_codes.workshop_id and m.user_id=auth.uid() and m.status='active' and m.role in ('owner','admin')));
 grant select, insert on public.marketing_referral_codes to authenticated;
 
+-- Keep partner creation and referral-code registration atomic in the same database transaction.
+create or replace function public.create_marketing_referral_code_for_partner()
+returns trigger
+language plpgsql
+set search_path = public
+as $$
+begin
+  insert into public.marketing_referral_codes(workshop_id, partner_id, referral_code, status)
+  values (new.workshop_id, new.id, new.referral_code, new.status);
+  return new;
+end;
+$$;
+create trigger marketing_partner_referral_code_insert
+after insert on public.marketing_partners
+for each row execute function public.create_marketing_referral_code_for_partner();
