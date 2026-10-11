@@ -48,7 +48,7 @@ create table if not exists public.service_tracking_events (
  workshop_id uuid not null references public.workshops(id) on delete cascade,
  booking_id uuid not null,
  work_order_id uuid,
- event_type text not null check (event_type in ('booking_created','booking_confirmed','vehicle_received','diagnosing','waiting_parts','repairing','quality_check','completed','cancelled','note')),
+ event_type text not null check (event_type in ('booking_created','booking_confirmed','vehicle_received','diagnosing','waiting_parts','repairing','quality_check','completed','vehicle_delivered','cancelled','note')),
  title text not null check (char_length(trim(title)) between 2 and 160),
  description text not null default '' check (char_length(description) <= 2000),
  visible_to_customer boolean not null default true,
